@@ -10,6 +10,10 @@ from app.core.config import get_settings
 # HMAC-SHA256: one shared secret signs and verifies. Enough for a single backend.
 ALGORITHM = "HS256"
 
+# bcrypt only reads the first 72 bytes of a password, and the bcrypt library
+# raises an error beyond that. Registration rejects longer passwords.
+MAX_PASSWORD_BYTES = 72
+
 
 class InvalidTokenError(Exception):
     """Raised when an access token is expired, tampered with or malformed.
@@ -36,8 +40,14 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     checkpw reads the salt back out of the stored hash, re-hashes the input
     with it, and compares the two in constant time (so response timing
     doesn't leak how many characters matched).
+
+    A password over MAX_PASSWORD_BYTES can never have been registered, so it
+    is reported as a mismatch instead of being passed to bcrypt.
     """
-    return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+    password_bytes = plain_password.encode("utf-8")
+    if len(password_bytes) > MAX_PASSWORD_BYTES:
+        return False
+    return bcrypt.checkpw(password_bytes, hashed_password.encode("utf-8"))
 
 
 def create_access_token(subject: str, expires_delta: timedelta | None = None) -> str:

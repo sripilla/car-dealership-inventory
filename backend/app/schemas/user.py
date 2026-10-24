@@ -6,10 +6,9 @@ fields such as hashed_password.
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
+from app.core.security import MAX_PASSWORD_BYTES
+
 MIN_PASSWORD_LENGTH = 8
-# bcrypt only reads the first 72 bytes of a password and the bcrypt library
-# raises an error beyond that, so longer passwords are rejected up front.
-MAX_PASSWORD_BYTES = 72
 
 
 class UserCreate(BaseModel):
@@ -25,6 +24,25 @@ class UserCreate(BaseModel):
         if len(value.encode("utf-8")) > MAX_PASSWORD_BYTES:
             raise ValueError(f"Password must be at most {MAX_PASSWORD_BYTES} bytes")
         return value
+
+
+class LoginRequest(BaseModel):
+    """Body of POST /api/auth/login.
+
+    Plain strings on purpose: any wrong credentials, well-formed or not,
+    get the same 401, so the response never hints at why login failed.
+    """
+
+    email: str
+    password: str
+
+
+class Token(BaseModel):
+    """Response of POST /api/auth/login."""
+
+    access_token: str
+    # OAuth2 convention: tells the client to send "Authorization: Bearer <token>".
+    token_type: str = "bearer"
 
 
 class UserOut(BaseModel):

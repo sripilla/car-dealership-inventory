@@ -1,7 +1,7 @@
-"""Business rules for accounts. Authentication is added in the login cycle."""
+"""Business rules for accounts: registration and authentication."""
 
-from app.core.exceptions import EmailAlreadyRegisteredError
-from app.core.security import hash_password
+from app.core.exceptions import EmailAlreadyRegisteredError, InvalidCredentialsError
+from app.core.security import hash_password, verify_password
 from app.db.models import User
 from app.repositories.user_repository import UserRepository
 
@@ -23,3 +23,14 @@ class AuthService:
         if self.users.get_by_email(email) is not None:
             raise EmailAlreadyRegisteredError(email)
         return self.users.create(email=email, hashed_password=hash_password(password))
+
+    def authenticate_user(self, email: str, password: str) -> User:
+        """Return the user if the email and password match.
+
+        Raises InvalidCredentialsError for an unknown email or a wrong
+        password alike, so the two cases are indistinguishable to callers.
+        """
+        user = self.users.get_by_email(email.lower())
+        if user is None or not verify_password(password, user.hashed_password):
+            raise InvalidCredentialsError
+        return user
