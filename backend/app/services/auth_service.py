@@ -1,6 +1,12 @@
-"""Business rules for accounts: registration, authentication and token lookup."""
+"""Business rules for accounts: registration, authentication, token lookup
+and the admin seed.
+"""
 
-from app.core.exceptions import EmailAlreadyRegisteredError, InvalidCredentialsError
+from app.core.exceptions import (
+    AdminSeedConflictError,
+    EmailAlreadyRegisteredError,
+    InvalidCredentialsError,
+)
 from app.core.security import (
     InvalidTokenError,
     decode_access_token,
@@ -52,3 +58,23 @@ class AuthService:
         if user is None:
             raise InvalidTokenError("Token does not belong to an existing user")
         return user
+
+    def ensure_admin(self, email: str, password: str) -> User:
+        """Create the admin account, or return it if it already exists.
+
+        Safe to run repeatedly. An existing admin is left unchanged (including
+        its password). Raises AdminSeedConflictError if the email belongs to
+        a normal user, because promoting them would give admin rights to
+        whoever registered that email first.
+        """
+        email = email.lower()
+        existing = self.users.get_by_email(email)
+        if existing is not None:
+            if existing.is_admin:
+                return existing
+            raise AdminSeedConflictError(email)
+        return self.users.create(
+            email=email,
+            hashed_password=hash_password(password),
+            is_admin=True,
+        )

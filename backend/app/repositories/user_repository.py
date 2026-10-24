@@ -23,9 +23,12 @@ class UserRepository:
         """
         return self.db.scalar(select(User).where(User.email == email))
 
-    def create(self, email: str, hashed_password: str) -> User:
-        """Insert a user and return it with database-generated fields loaded."""
-        user = User(email=email, hashed_password=hashed_password)
+    def create(self, email: str, hashed_password: str, is_admin: bool = False) -> User:
+        """Insert a user and return it with database-generated fields loaded.
+
+        is_admin defaults to False; only the admin seed passes True.
+        """
+        user = User(email=email, hashed_password=hashed_password, is_admin=is_admin)
         self.db.add(user)
         self.db.commit()
         self.db.refresh(user)  # load id and created_at, which the database filled in
