@@ -43,3 +43,22 @@ def client(db_session):
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def registered_user(client):
+    email = "login@example.com"
+    password = "SecurePassword123!"
+
+    response = client.post(
+        "/api/auth/register",
+        json={"email": email, "password": password},
+    )
+    assert response.status_code == 201
+
+    return {
+        "id": response.json()["id"],
+        "email": email,
+        "password": password,
+    }
+
