@@ -43,7 +43,7 @@ Swagger API docs: http://localhost:8000/docs
 
 ```bash
 cd backend && pytest
-cd frontend && npm run test:run
+cd ../frontend && npm run test:run
 ```
 
 ## Screenshots
