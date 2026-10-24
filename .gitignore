@@ -1,0 +1,19 @@
+# Python
+venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Databases and secrets
+*.db
+.env
+
+# Node
+node_modules/
+dist/
+coverage/
+
+# macOS
+.DS_Store
