@@ -1,6 +1,8 @@
 
 """Tests for POST /api/auth/register."""
 
+import pytest
+
 VALID_USER = {
     "email": "siri@example.com",
     "password": "SecurePassword123!",
@@ -55,3 +57,55 @@ def test_register_rejects_email_with_different_case(client):
     second_response = register(client, email="Siri@Example.com")
 
     assert second_response.status_code == 409
+
+
+# Invalid input
+
+
+@pytest.mark.parametrize(
+    "email",
+    ["not-an-email", "siri@", "@example.com"],
+)
+def test_register_rejects_invalid_email(client, email):
+    response = register(client, email=email)
+
+    assert response.status_code == 422
+
+
+def test_register_rejects_password_shorter_than_8_characters(client):
+    response = register(client, password="A" * 7)
+
+    assert response.status_code == 422
+
+
+def test_register_accepts_password_with_8_characters(client):
+    response = register(client, password="A" * 8)
+
+    assert response.status_code == 201
+
+
+def test_register_accepts_password_with_72_ascii_bytes(client):
+    password = "A" * 72
+
+    response = register(client, password=password)
+
+    assert response.status_code == 201
+
+
+def test_register_rejects_password_with_73_ascii_bytes(client):
+    password = "A" * 73
+
+    response = register(client, password=password)
+
+    assert response.status_code == 422
+
+
+def test_register_rejects_password_over_72_utf8_bytes(client):
+    password = "é" * 40
+
+    assert len(password) < 72
+    assert len(password.encode("utf-8")) == 80
+
+    response = register(client, password=password)
+
+    assert response.status_code == 422
