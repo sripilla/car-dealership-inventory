@@ -1,4 +1,6 @@
-"""FastAPI dependencies shared by routes. require_admin is added in the next cycle."""
+"""FastAPI dependencies shared by routes: the auth service, the current user,
+and the admin check.
+"""
 
 from typing import Annotated
 
@@ -46,3 +48,17 @@ def get_current_user(
         return auth.get_user_from_token(credentials.credentials)
     except InvalidTokenError as exc:
         raise _credentials_error() from exc
+
+
+def require_admin(current_user: Annotated[User, Depends(get_current_user)]) -> User:
+    """Return the current user if they are an admin, otherwise raise 403.
+
+    Builds on get_current_user, so an unauthenticated request gets 401 before
+    this check runs: 401 means "who are you?", 403 means "not allowed".
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required",
+        )
+    return current_user
