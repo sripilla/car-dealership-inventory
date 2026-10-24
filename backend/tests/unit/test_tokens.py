@@ -60,7 +60,7 @@ def test_decode_access_token_rejects_wrong_signing_secret():
             "sub": "42",
             "exp": datetime.now(UTC) + timedelta(minutes=5),
         },
-        "some-other-secret",
+        "a-different-secret-that-is-32-bytes-long",
         algorithm="HS256",
     )
 
