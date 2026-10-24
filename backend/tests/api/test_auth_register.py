@@ -109,3 +109,13 @@ def test_register_rejects_password_over_72_utf8_bytes(client):
     response = register(client, password=password)
 
     assert response.status_code == 422
+
+
+# Admin privileges
+
+
+def test_register_cannot_create_admin(client):
+    response = register(client, is_admin=True)
+
+    assert response.status_code == 201
+    assert response.json()["is_admin"] is False
