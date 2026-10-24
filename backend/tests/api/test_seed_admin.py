@@ -1,11 +1,12 @@
 """Tests for the admin seed script."""
 
 import pytest
-from app.seed_admin import AdminSeedConflictError, seed_admin
 from sqlalchemy import func, select
 
+from app.core.config import Settings
 from app.core.security import verify_password
 from app.db.models import User
+from app.seed_admin import AdminSeedConflictError, main, seed_admin
 
 
 def test_seed_admin_creates_admin(db_session):
@@ -102,4 +103,61 @@ def test_seed_admin_stores_hashed_password(db_session):
     user = seed_admin(db_session, "admin@example.com", password)
 
     assert user.hashed_password != password
+    assert verify_password(password, user.hashed_password)
+
+
+def test_main_returns_zero_on_success(db_session, monkeypatch, capsys):
+    monkeypatch.setattr(
+        "app.seed_admin.SessionLocal",
+        lambda: db_session,
+    )
+    monkeypatch.setattr(
+        "app.seed_admin.get_settings",
+        lambda: Settings(
+            ADMIN_EMAIL="admin@example.com",
+            ADMIN_PASSWORD="AdminPassword123!",
+        ),
+    )
+
+    result = main()
+
+    captured = capsys.readouterr()
+
+    assert result == 0
+    assert "Admin ready" in captured.out
+
+
+def test_main_returns_one_on_conflict(db_session, client, monkeypatch, capsys):
+    email = "admin@example.com"
+    password = "RegularPassword123!"
+
+    response = client.post(
+        "/api/auth/register",
+        json={"email": email, "password": password},
+    )
+    assert response.status_code == 201
+
+    monkeypatch.setattr(
+        "app.seed_admin.SessionLocal",
+        lambda: db_session,
+    )
+    monkeypatch.setattr(
+        "app.seed_admin.get_settings",
+        lambda: Settings(
+            ADMIN_EMAIL=email,
+            ADMIN_PASSWORD="AdminPassword123!",
+        ),
+    )
+
+    result = main()
+
+    captured = capsys.readouterr()
+
+    assert result == 1
+    assert "Refusing" in captured.err
+
+    user = db_session.scalar(select(User).where(User.email == email))
+
+    assert user is not None
+    assert user.is_admin is False
     assert verify_password(password, user.hashed_password)
