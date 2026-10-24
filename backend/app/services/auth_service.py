@@ -1,7 +1,12 @@
-"""Business rules for accounts: registration and authentication."""
+"""Business rules for accounts: registration, authentication and token lookup."""
 
 from app.core.exceptions import EmailAlreadyRegisteredError, InvalidCredentialsError
-from app.core.security import hash_password, verify_password
+from app.core.security import (
+    InvalidTokenError,
+    decode_access_token,
+    hash_password,
+    verify_password,
+)
 from app.db.models import User
 from app.repositories.user_repository import UserRepository
 
@@ -33,4 +38,17 @@ class AuthService:
         user = self.users.get_by_email(email.lower())
         if user is None or not verify_password(password, user.hashed_password):
             raise InvalidCredentialsError
+        return user
+
+    def get_user_from_token(self, token: str) -> User:
+        """Return the user an access token belongs to.
+
+        Raises InvalidTokenError if the token is invalid or expired, or if it
+        is validly signed but its user no longer exists (e.g. a deleted account).
+        """
+        subject = decode_access_token(token)
+        # Tokens we issue always carry a numeric id; anything else can't match a user.
+        user = self.users.get_by_id(int(subject)) if subject.isdigit() else None
+        if user is None:
+            raise InvalidTokenError("Token does not belong to an existing user")
         return user

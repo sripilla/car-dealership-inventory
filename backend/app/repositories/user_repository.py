@@ -12,6 +12,10 @@ class UserRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
+    def get_by_id(self, user_id: int) -> User | None:
+        """Return the user with this primary key, or None."""
+        return self.db.get(User, user_id)
+
     def get_by_email(self, email: str) -> User | None:
         """Return the user with exactly this email, or None.
 

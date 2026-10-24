@@ -1,10 +1,10 @@
-"""Authentication endpoints. /me is added in the next cycle."""
+"""Authentication endpoints: register, login and the current user."""
 
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.deps import get_auth_service
+from app.api.deps import get_auth_service, get_current_user
 from app.core.exceptions import EmailAlreadyRegisteredError, InvalidCredentialsError
 from app.core.security import create_access_token
 from app.db.models import User
@@ -45,3 +45,9 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
     return Token(access_token=create_access_token(str(user.id)))
+
+
+@router.get("/me", response_model=UserOut)
+def read_me(current_user: Annotated[User, Depends(get_current_user)]) -> User:
+    """Return the logged-in user. The frontend uses is_admin to show admin UI."""
+    return current_user
