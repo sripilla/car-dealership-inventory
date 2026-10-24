@@ -47,9 +47,7 @@ def test_login_rejects_unknown_email(client):
     assert response.status_code == 401
 
 
-def test_login_uses_same_error_for_unknown_email_and_wrong_password(
-    client, registered_user
-):
+def test_login_uses_same_error_for_unknown_email_and_wrong_password(client, registered_user):
     wrong_password_response = login(
         client,
         registered_user["email"],
@@ -63,9 +61,7 @@ def test_login_uses_same_error_for_unknown_email_and_wrong_password(
 
     assert wrong_password_response.status_code == 401
     assert unknown_email_response.status_code == 401
-    assert wrong_password_response.json()["detail"] == (
-        unknown_email_response.json()["detail"]
-    )
+    assert wrong_password_response.json()["detail"] == (unknown_email_response.json()["detail"])
 
 
 def test_login_accepts_email_with_different_case(client, registered_user):

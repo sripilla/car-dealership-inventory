@@ -1,4 +1,3 @@
-
 """Tests for POST /api/auth/register."""
 
 import pytest

@@ -63,7 +63,6 @@ def registered_user(client):
     }
 
 
-
 @pytest.fixture
 def auth_headers(client, registered_user):
     """Return authorization headers for a registered user."""
