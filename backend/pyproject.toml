@@ -9,3 +9,7 @@ extend-exclude = ["venv"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+# The local alembic/ migrations folder makes Ruff think "alembic" is our own module.
+known-third-party = ["alembic"]
