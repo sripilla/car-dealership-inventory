@@ -2,6 +2,7 @@
 
 Connects Alembic to the app: the database URL comes from Settings (.env),
 and the schema to compare against comes from Base.metadata.
+
 """
 
 from logging.config import fileConfig
@@ -9,12 +10,12 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+import app.db.models  # noqa: F401  (registers every table for autogenerate)
 from app.core.config import get_settings
 from app.db.base import Base
 
 # Models must be imported so their tables register on Base.metadata,
 # otherwise autogenerate sees an empty schema. Added once the first model exists.
-
 config = context.config
 
 # Use the same DATABASE_URL as the app, so migrations can never target a different DB.
