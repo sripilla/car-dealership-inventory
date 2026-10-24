@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+import app.db.models  # noqa: F401  (registers every table before create_all)
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
@@ -42,3 +43,38 @@ def client(db_session):
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def registered_user(client):
+    email = "login@example.com"
+    password = "SecurePassword123!"
+
+    response = client.post(
+        "/api/auth/register",
+        json={"email": email, "password": password},
+    )
+    assert response.status_code == 201
+
+    return {
+        "id": response.json()["id"],
+        "email": email,
+        "password": password,
+    }
+
+
+@pytest.fixture
+def auth_headers(client, registered_user):
+    """Return authorization headers for a registered user."""
+    response = client.post(
+        "/api/auth/login",
+        json={
+            "email": registered_user["email"],
+            "password": registered_user["password"],
+        },
+    )
+
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+
+    return {"Authorization": f"Bearer {token}"}

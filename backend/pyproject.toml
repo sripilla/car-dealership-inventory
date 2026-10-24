@@ -5,7 +5,12 @@ pythonpath = ["."]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-extend-exclude = ["venv"]
+# venv is third-party code; alembic/versions is generated and reviewed by hand.
+extend-exclude = ["venv", "alembic/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+# The local alembic/ migrations folder makes Ruff think "alembic" is our own module.
+known-third-party = ["alembic"]
