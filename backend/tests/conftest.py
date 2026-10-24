@@ -62,3 +62,20 @@ def registered_user(client):
         "password": password,
     }
 
+
+
+@pytest.fixture
+def auth_headers(client, registered_user):
+    """Return authorization headers for a registered user."""
+    response = client.post(
+        "/api/auth/login",
+        json={
+            "email": registered_user["email"],
+            "password": registered_user["password"],
+        },
+    )
+
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+
+    return {"Authorization": f"Bearer {token}"}
