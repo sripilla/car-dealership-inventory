@@ -43,6 +43,14 @@ class VehicleService:
         """
         self.vehicles.delete(self._get_or_raise(vehicle_id))
 
+    def purchase_vehicle(self, vehicle_id: int) -> Vehicle:
+        """Buy one unit of a vehicle, reducing its stock by one.
+
+        Raises VehicleNotFoundError if no vehicle has this id.
+        """
+        vehicle = self._get_or_raise(vehicle_id)
+        return self.vehicles.update(vehicle, {"quantity": vehicle.quantity - 1})
+
     def _get_or_raise(self, vehicle_id: int) -> Vehicle:
         """Return the vehicle with this id, or raise VehicleNotFoundError."""
         vehicle = self.vehicles.get_by_id(vehicle_id)

@@ -113,3 +113,20 @@ def delete_vehicle(
         vehicles.delete_vehicle(vehicle_id)
     except VehicleNotFoundError as exc:
         raise _not_found(exc) from exc
+
+
+# POST, not PUT: a purchase is an action that changes stock, not a
+# replacement of the vehicle. Any logged-in user may buy.
+@router.post(
+    "/{vehicle_id}/purchase",
+    response_model=VehicleOut,
+    dependencies=[Depends(get_current_user)],
+)
+def purchase_vehicle(
+    vehicle_id: int,
+    vehicles: Annotated[VehicleService, Depends(get_vehicle_service)],
+) -> Vehicle:
+    """Buy one unit of a vehicle and return it with the reduced stock.
+    Requires a logged-in user.
+    """
+    return vehicles.purchase_vehicle(vehicle_id)
