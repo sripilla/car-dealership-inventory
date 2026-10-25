@@ -76,13 +76,18 @@ class VehicleSearchFilters(BaseModel):
 class VehicleUpdate(BaseModel):
     """Body of PUT /api/vehicles/{id}: a partial update.
 
-    Every field is optional. Only fields the client actually sends are
-    applied (see model_dump(exclude_unset=True) in the service); omitted
-    fields keep their current values.
+    Omitted fields keep their current values; supplied fields follow the
+    same rules as VehicleCreate.
+
+    Each field is *optional* but not *nullable*: the type has no "| None",
+    so an explicit null fails validation with 422. The None default is used
+    only when a field is omitted; Pydantic doesn't validate defaults, and the
+    service's model_dump(exclude_unset=True) drops omitted fields, so None is
+    never written to the database.
     """
 
-    make: str | None = None
-    model: str | None = None
-    category: VehicleCategory | None = None
-    price: int | None = None
-    quantity: int | None = None
+    make: NonBlankStr = Field(default=None)
+    model: NonBlankStr = Field(default=None)
+    category: VehicleCategory = Field(default=None)
+    price: int = Field(default=None, gt=0, strict=True)
+    quantity: int = Field(default=None, ge=0, strict=True)
