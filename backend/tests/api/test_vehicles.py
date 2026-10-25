@@ -645,3 +645,18 @@ def test_purchase_decreases_quantity_by_one(client, auth_headers):
 
     listed = client.get(VEHICLES_URL, headers=auth_headers).json()
     assert listed == [vehicle | {"quantity": 2}]
+
+
+def test_purchase_out_of_stock_returns_400_and_keeps_quantity(client, auth_headers):
+    vehicle = create_vehicle(client, auth_headers, quantity=0)
+
+    response = client.post(
+        purchase_url(vehicle["id"]),
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Vehicle is out of stock"}
+
+    listed = client.get(VEHICLES_URL, headers=auth_headers).json()
+    assert listed == [vehicle]
