@@ -36,6 +36,11 @@ def vehicle_url(vehicle_id):
     return f"{VEHICLES_URL}/{vehicle_id}"
 
 
+def purchase_url(vehicle_id):
+    """URL for purchasing one vehicle."""
+    return f"{vehicle_url(vehicle_id)}/purchase"
+
+
 def listed_ids(client, headers):
     """Ids of every vehicle GET /api/vehicles returns, in order."""
     response = client.get(VEHICLES_URL, headers=headers)
@@ -625,3 +630,18 @@ def test_delete_vehicle_without_token_returns_401(client, auth_headers):
     assert response.status_code == 401
     assert response.headers["www-authenticate"] == "Bearer"
     assert vehicle["id"] in listed_ids(client, auth_headers)
+
+
+def test_purchase_decreases_quantity_by_one(client, auth_headers):
+    vehicle = create_vehicle(client, auth_headers, quantity=3)
+
+    response = client.post(
+        purchase_url(vehicle["id"]),
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json() == vehicle | {"quantity": 2}
+
+    listed = client.get(VEHICLES_URL, headers=auth_headers).json()
+    assert listed == [vehicle | {"quantity": 2}]
