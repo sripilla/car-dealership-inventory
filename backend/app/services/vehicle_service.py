@@ -1,5 +1,6 @@
 """Business rules for vehicles."""
 
+from app.core.exceptions import VehicleNotFoundError
 from app.db.models import Vehicle
 from app.repositories.vehicle_repository import VehicleRepository
 from app.schemas.vehicle import VehicleCreate, VehicleSearchFilters, VehicleUpdate
@@ -30,6 +31,9 @@ class VehicleService:
 
         exclude_unset=True drops fields that were omitted from the request,
         so they keep their current values; {} therefore changes nothing.
+        Raises VehicleNotFoundError if no vehicle has this id.
         """
         vehicle = self.vehicles.get_by_id(vehicle_id)
+        if vehicle is None:
+            raise VehicleNotFoundError(vehicle_id)
         return self.vehicles.update(vehicle, data.model_dump(exclude_unset=True))

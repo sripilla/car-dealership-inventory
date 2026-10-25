@@ -2,9 +2,10 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.deps import get_current_user, get_vehicle_service
+from app.core.exceptions import VehicleNotFoundError
 from app.db.models import Vehicle
 from app.schemas.vehicle import (
     VehicleCreate,
@@ -77,5 +78,13 @@ def update_vehicle(
     payload: VehicleUpdate,
     vehicles: Annotated[VehicleService, Depends(get_vehicle_service)],
 ) -> Vehicle:
-    """Update some or all of a vehicle's fields. Requires a logged-in user."""
-    return vehicles.update_vehicle(vehicle_id, payload)
+    """Update some or all of a vehicle's fields. Returns 404 if the id is unknown.
+    Requires a logged-in user.
+    """
+    try:
+        return vehicles.update_vehicle(vehicle_id, payload)
+    except VehicleNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vehicle not found",
+        ) from exc

@@ -20,3 +20,7 @@ class AdminSeedConflictError(Exception):
     The seed refuses to promote that account: whoever registered it first
     would otherwise gain admin rights with their own password.
     """
+
+
+class VehicleNotFoundError(Exception):
+    """Raised when no vehicle has the requested id."""
