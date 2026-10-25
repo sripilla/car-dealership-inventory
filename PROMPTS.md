@@ -13,3 +13,7 @@ https://claude.ai/share/208893b0-99dc-4ee1-a2b9-5d7a50901922
 ## 2026-10-25 – Claude (Phase 2: vehicle management)
 
 https://claude.ai/share/30e28f68-fa41-451c-b6da-141ec6a36f5d
+
+## 2026-10-25 – Claude (Phase 3: purchase and restock)
+
+https://claude.ai/share/1818e723-5ae7-4ec4-aba5-ae95afdbda2c
