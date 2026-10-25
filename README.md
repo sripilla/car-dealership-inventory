@@ -148,3 +148,11 @@ I used AI to help understand the authentication flow, including password hashing
 ### Phase 2 – Vehicle Management
 
 I used AI as a pair-programming assistant to plan test scenarios, identify edge cases, and review the vehicle API's behaviour. I followed a test-first approach for creating, listing, searching, updating, and deleting vehicles, including validation, authentication, and admin permissions. I ran the test suite and lint checks, reviewed the results, and refined the tests to make sure they verified the intended behaviour rather than just passing.
+
+### Phase 3 – AI Usage
+
+I used Claude as a pair-programming partner to understand and implement purchase and restock workflows. At my request, Claude helped write tests and code, which I reviewed and verified through test runs. This phase helped me understand atomic database updates and safe inventory management.
+
+### Phase 4 – AI Usage
+
+I used Claude as a pair-programming partner to build the React frontend, write tests and connect it to the FastAPI backend. I reviewed the implementation and used tests, build and lint checks, and browser testing to identify and fix issues. This helped me understand frontend-backend integration and the importance of verifying AI-generated code.
