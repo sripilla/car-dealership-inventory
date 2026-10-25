@@ -36,6 +36,11 @@ class VehicleRepository:
         self.db.refresh(vehicle)
         return vehicle
 
+    def delete(self, vehicle: Vehicle) -> None:
+        """Permanently remove a vehicle."""
+        self.db.delete(vehicle)
+        self.db.commit()
+
     def list_all(self) -> list[Vehicle]:
         """Return every vehicle, including out-of-stock ones, ordered by id.
 

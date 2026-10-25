@@ -33,7 +33,19 @@ class VehicleService:
         so they keep their current values; {} therefore changes nothing.
         Raises VehicleNotFoundError if no vehicle has this id.
         """
+        vehicle = self._get_or_raise(vehicle_id)
+        return self.vehicles.update(vehicle, data.model_dump(exclude_unset=True))
+
+    def delete_vehicle(self, vehicle_id: int) -> None:
+        """Remove a vehicle. Raises VehicleNotFoundError if no vehicle has this id.
+
+        Who may delete is decided by the route (admin only), not here.
+        """
+        self.vehicles.delete(self._get_or_raise(vehicle_id))
+
+    def _get_or_raise(self, vehicle_id: int) -> Vehicle:
+        """Return the vehicle with this id, or raise VehicleNotFoundError."""
         vehicle = self.vehicles.get_by_id(vehicle_id)
         if vehicle is None:
             raise VehicleNotFoundError(vehicle_id)
-        return self.vehicles.update(vehicle, data.model_dump(exclude_unset=True))
+        return vehicle
