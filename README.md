@@ -4,7 +4,7 @@
 
 A full-stack car dealership inventory management system built with FastAPI and React, developed using Test-Driven Development (TDD).
 
-Users register and log in with JWT authentication. Logged-in users can browse every vehicle, search by make, model, category or price range, and add or update vehicles. Only admins can delete a vehicle. Each vehicle has an ID, make, model, category, price and quantity in stock. Purchasing and restocking follow in the next phase.
+Users register and log in with JWT authentication. Logged-in users can browse every vehicle, search by make, model, category or price range, and add or update vehicles. Only admins can delete a vehicle. Each vehicle has an ID, make, model, category, price and quantity in stock. Any logged-in user can purchase a vehicle, which reduces its stock by one; a purchase at zero stock is rejected. Admins can also restock vehicles.
 
 ## Setup
 
@@ -80,6 +80,18 @@ npm run dev                     # http://localhost:5173
 | `PUT` performs a partial update | The spec names `PUT`, but only the fields sent are changed (PATCH-like). Omitted fields keep their values and `{}` changes nothing |
 | An explicit `null` in an update returns 422 | Omitting a field and sending `null` are different. Every column is required, so `null` is rejected instead of crashing on the database's NOT NULL constraint |
 
+### Inventory
+
+| Decision | Reason |
+|---|---|
+| A purchase always buys one unit, with no request body | Matches the spec's single Purchase button |
+| The purchase is one conditional `UPDATE ... WHERE quantity >= 1` | The database checks and subtracts in one step, so two buyers can't both take the last car. No row changed means out of stock |
+| Out-of-stock purchase returns 400 | The request can't be fulfilled until the vehicle is restocked; stock is never negative, even if the UI is bypassed |
+| Restock is admin-only and checked before the lookup | Same rule as delete: a normal user gets 403 even for an unknown id |
+| Restock quantity must be at least 1 (strict integer) | Restocking 0 or a negative amount is a client mistake, so it returns 422 |
+| Purchase and restock return the updated vehicle | The UI can update the card without a second request |
+| Errors are mapped in each route, not with global exception handlers | Same pattern as the earlier phases; centralising them is a possible refactor |
+
 ## API
 
 The health check is at `/health`; every other endpoint is under `/api`. Protected endpoints need the header `Authorization: Bearer <token>`.
@@ -104,13 +116,17 @@ A vehicle is returned as `{id, make, model, category, price, quantity}`.
 | `GET` | `/api/vehicles/search` | Bearer | `200` list of matching vehicles | `401`, `422` invalid or unknown parameter, or `min_price > max_price` |
 | `PUT` | `/api/vehicles/{id}` | Bearer | `200` updated vehicle | `401`, `404` unknown id, `422` invalid value or `null` |
 | `DELETE` | `/api/vehicles/{id}` | Bearer, admin | `204` no body | `401`, `403` not an admin, `404` unknown id |
+| `POST` | `/api/vehicles/{id}/purchase` | Bearer | `200` vehicle with quantity reduced by 1 | `400` out of stock, `401`, `404` unknown id |
+| `POST` | `/api/vehicles/{id}/restock` | Bearer, admin | `200` vehicle with quantity increased | `401`, `403` not an admin, `404` unknown id, `422` quantity below 1 |
 
 Search parameters, all optional: `make`, `model` (partial, case-insensitive), `category` (exact), `min_price`, `max_price` (inclusive). Example: `/api/vehicles/search?make=toy&category=Sedan&max_price=2500000`.
+
+Restock body: `{"quantity": 5}`. Purchase takes no body.
 
 Interactive docs: http://localhost:8000/docs. Log in, then use **Authorize** and paste the token.
 
 ## Tests
-
+Backend: 123 tests, 98% coverage.
 ```bash
 cd backend && pytest
 cd backend && pytest --cov=app --cov-report=term-missing   # with coverage
@@ -123,7 +139,7 @@ _TODO_
 
 ## My AI Usage
 
-I used AI as a pair-programming assistant and mentor to clarify concepts, discuss implementation choices, and guide my TDD workflow. I reviewed the suggestions, ran the tests and other checks myself, and focused on understanding the code before committing it.
+I used AI to plan the purchase and restock endpoints and to explain how to stop overselling. I wrote the first purchase tests, then saw the "read, check, save" version could sell the last car twice, so I refactored it into one conditional SQL update while keeping every test green. With the deadline close, I asked AI to write the remaining tests and code (purchase 404 and the restock rules) from my scenarios, and I reviewed each test before committing. I deliberately cut optional extras, such as a concurrency test and global exception handlers, to keep time for the frontend.
 
 ### Phase 1 – Authentication
 
