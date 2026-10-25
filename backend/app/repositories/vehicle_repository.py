@@ -34,13 +34,16 @@ class VehicleRepository:
         make: str | None = None,
         model: str | None = None,
         category: str | None = None,
+        min_price: int | None = None,
+        max_price: int | None = None,
     ) -> list[Vehicle]:
         """Return vehicles matching every filter given, ordered by id.
 
         Text filters match anywhere in the value, ignoring case. autoescape
         makes % and _ match literally instead of acting as LIKE wildcards,
         so searching "%" doesn't return every vehicle. Category is an exact
-        match; callers pass an already-validated value.
+        match; callers pass an already-validated value. Both price bounds
+        are inclusive.
         """
         query = select(Vehicle).order_by(Vehicle.id)
         if make is not None:
@@ -49,4 +52,8 @@ class VehicleRepository:
             query = query.where(Vehicle.model.icontains(model, autoescape=True))
         if category is not None:
             query = query.where(Vehicle.category == category)
+        if min_price is not None:
+            query = query.where(Vehicle.price >= min_price)
+        if max_price is not None:
+            query = query.where(Vehicle.price <= max_price)
         return list(self.db.scalars(query))

@@ -1,8 +1,8 @@
 """Request and response shapes for vehicles."""
 
-from typing import Annotated
+from typing import Annotated, Self
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from app.core.categories import VehicleCategory
 
@@ -50,3 +50,20 @@ class VehicleSearchFilters(BaseModel):
     # The enum rejects unknown or wrong-case values with 422, the same rule
     # as create, so a typo is reported instead of silently matching nothing.
     category: VehicleCategory | None = None
+    # Not strict, unlike VehicleCreate: query-string values always arrive as
+    # text, so "2000000" must be converted. "abc" still fails with 422.
+    min_price: int | None = None  # inclusive
+    max_price: int | None = None  # inclusive
+
+    @model_validator(mode="after")
+    def check_price_range(self) -> Self:
+        """Reject min_price > max_price: an impossible range is a client mistake,
+        and an empty result would hide it.
+        """
+        if (
+            self.min_price is not None
+            and self.max_price is not None
+            and self.min_price > self.max_price
+        ):
+            raise ValueError("min_price must not be greater than max_price")
+        return self
