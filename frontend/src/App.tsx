@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { AppLayout } from './components/AppLayout'
 import { AuthProvider } from './context/AuthProvider'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
@@ -17,7 +18,10 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<DashboardPage />} />
+            {/* The nav bar wraps every logged-in page. */}
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<DashboardPage />} />
+            </Route>
           </Route>
           {/* Unknown URLs go home (and from there to /login if logged out). */}
           <Route path="*" element={<Navigate to="/" replace />} />
