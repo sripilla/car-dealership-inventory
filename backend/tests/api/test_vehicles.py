@@ -168,3 +168,36 @@ def test_create_vehicle_with_numeric_string_returns_422(client, auth_headers, fi
     )
 
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "category",
+    ["Truck", "sedan", ""],
+)
+def test_create_vehicle_with_invalid_category_returns_422(client, auth_headers, category):
+    payload = valid_payload(category=category)
+
+    response = client.post(
+        VEHICLES_URL,
+        json=payload,
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "category",
+    ["Sedan", "SUV", "Hatchback", "Electric"],
+)
+def test_create_vehicle_accepts_each_allowed_category(client, auth_headers, category):
+    payload = valid_payload(category=category)
+
+    response = client.post(
+        VEHICLES_URL,
+        json=payload,
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 201
+    assert response.json()["category"] == category
