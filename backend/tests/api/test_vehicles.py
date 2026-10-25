@@ -498,3 +498,75 @@ def test_update_unknown_vehicle_returns_404(client, auth_headers):
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Vehicle not found"}
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"price": 0},
+        {"price": -1},
+        {"quantity": -1},
+        {"make": ""},
+        {"model": "   "},
+        {"price": "2"},
+    ],
+    ids=[
+        "price zero",
+        "price negative",
+        "quantity negative",
+        "empty make",
+        "whitespace-only model",
+        "numeric string price",
+    ],
+)
+def test_update_vehicle_with_invalid_value_returns_422(client, auth_headers, body):
+    vehicle = create_vehicle(client, auth_headers)
+    url = f"{VEHICLES_URL}/{vehicle['id']}"
+
+    response = client.put(url, json=body, headers=auth_headers)
+
+    assert response.status_code == 422
+
+
+def test_update_vehicle_with_invalid_category_returns_422(client, auth_headers):
+    vehicle = create_vehicle(client, auth_headers)
+    url = f"{VEHICLES_URL}/{vehicle['id']}"
+
+    response = client.put(
+        url,
+        json={"category": "Truck"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["make", "model", "category", "price", "quantity"],
+)
+def test_update_vehicle_with_null_field_returns_422(client, auth_headers, field):
+    vehicle = create_vehicle(client, auth_headers)
+    url = f"{VEHICLES_URL}/{vehicle['id']}"
+
+    response = client.put(
+        url,
+        json={field: None},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 422
+
+
+def test_update_vehicle_trims_surrounding_whitespace(client, auth_headers):
+    vehicle = create_vehicle(client, auth_headers)
+    url = f"{VEHICLES_URL}/{vehicle['id']}"
+
+    response = client.put(
+        url,
+        json={"make": "  Honda "},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["make"] == "Honda"
