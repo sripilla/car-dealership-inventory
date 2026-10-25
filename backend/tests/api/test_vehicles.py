@@ -369,3 +369,121 @@ def test_search_with_non_numeric_min_price_returns_422(client, auth_headers):
     )
 
     assert response.status_code == 422
+
+
+def test_search_combined_filters_returns_only_matching_vehicles(client, auth_headers):
+    camry = create_vehicle(
+        client,
+        auth_headers,
+        make="Toyota",
+        model="Camry",
+        category="Sedan",
+    )
+    create_vehicle(
+        client,
+        auth_headers,
+        make="Toyota",
+        model="Fortuner",
+        category="SUV",
+    )
+    create_vehicle(
+        client,
+        auth_headers,
+        make="Honda",
+        model="City",
+        category="Sedan",
+    )
+
+    response = client.get(
+        SEARCH_URL,
+        params={"make": "toy", "category": "Sedan"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    assert [vehicle["id"] for vehicle in response.json()] == [camry["id"]]
+
+
+def test_search_with_no_matches_returns_empty_list(client, auth_headers):
+    create_vehicle(client, auth_headers, make="Toyota")
+
+    response = client.get(
+        SEARCH_URL,
+        params={"make": "Ferrari"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_search_without_parameters_returns_all_vehicles_in_id_order(client, auth_headers):
+    first = create_vehicle(client, auth_headers, make="Toyota")
+    second = create_vehicle(client, auth_headers, make="Honda")
+    third = create_vehicle(client, auth_headers, make="Ford")
+
+    response = client.get(SEARCH_URL, headers=auth_headers)
+
+    assert response.status_code == 200
+    assert [vehicle["id"] for vehicle in response.json()] == [
+        first["id"],
+        second["id"],
+        third["id"],
+    ]
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [("colour", "red"), ("modle", "cam")],
+    ids=["unknown filter", "typo of model"],
+)
+def test_search_with_unknown_parameter_returns_422(client, auth_headers, name, value):
+    response = client.get(
+        SEARCH_URL,
+        params={name: value},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 422
+
+
+def test_update_vehicle_changes_only_supplied_fields(client, auth_headers):
+    vehicle = create_vehicle(client, auth_headers)
+    url = f"{VEHICLES_URL}/{vehicle['id']}"
+
+    response = client.put(
+        url,
+        json={"price": 4200000},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json() == vehicle | {"price": 4200000}
+
+    list_response = client.get(VEHICLES_URL, headers=auth_headers)
+    saved_vehicle = next(item for item in list_response.json() if item["id"] == vehicle["id"])
+    assert saved_vehicle["price"] == 4200000
+
+
+def test_update_vehicle_with_empty_body_changes_nothing(client, auth_headers):
+    vehicle = create_vehicle(client, auth_headers)
+    url = f"{VEHICLES_URL}/{vehicle['id']}"
+
+    response = client.put(
+        url,
+        json={},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json() == vehicle
+
+
+def test_update_vehicle_without_token_returns_401(client, auth_headers):
+    vehicle = create_vehicle(client, auth_headers)
+    url = f"{VEHICLES_URL}/{vehicle['id']}"
+
+    response = client.put(url, json={"price": 4200000})
+
+    assert response.status_code == 401
+    assert response.headers["www-authenticate"] == "Bearer"
