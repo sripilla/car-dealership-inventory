@@ -27,3 +27,15 @@ class VehicleRepository:
         insertion order, Postgres doesn't), so the order is made explicit.
         """
         return list(self.db.scalars(select(Vehicle).order_by(Vehicle.id)))
+
+    def search(self, *, make: str | None = None) -> list[Vehicle]:
+        """Return vehicles matching every filter given, ordered by id.
+
+        Text filters match anywhere in the value, ignoring case. autoescape
+        makes % and _ match literally instead of acting as LIKE wildcards,
+        so searching "%" doesn't return every vehicle.
+        """
+        query = select(Vehicle).order_by(Vehicle.id)
+        if make is not None:
+            query = query.where(Vehicle.make.icontains(make, autoescape=True))
+        return list(self.db.scalars(query))

@@ -2,11 +2,11 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.api.deps import get_current_user, get_vehicle_service
 from app.db.models import Vehicle
-from app.schemas.vehicle import VehicleCreate, VehicleOut
+from app.schemas.vehicle import VehicleCreate, VehicleOut, VehicleSearchFilters
 from app.services.vehicle_service import VehicleService
 
 router = APIRouter(prefix="/api/vehicles", tags=["vehicles"])
@@ -40,3 +40,18 @@ def list_vehicles(
 ) -> list[Vehicle]:
     """List every vehicle, including out-of-stock ones. Requires a logged-in user."""
     return vehicles.list_vehicles()
+
+
+# Declared before any "/{id}" routes, so "search" can never be read as an id
+# if a GET /{id} route is added later.
+@router.get(
+    "/search",
+    response_model=list[VehicleOut],
+    dependencies=[Depends(get_current_user)],
+)
+def search_vehicles(
+    filters: Annotated[VehicleSearchFilters, Query()],
+    vehicles: Annotated[VehicleService, Depends(get_vehicle_service)],
+) -> list[Vehicle]:
+    """Search vehicles by make (partial, case-insensitive). Requires a logged-in user."""
+    return vehicles.search_vehicles(filters)

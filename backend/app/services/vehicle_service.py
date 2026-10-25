@@ -2,7 +2,7 @@
 
 from app.db.models import Vehicle
 from app.repositories.vehicle_repository import VehicleRepository
-from app.schemas.vehicle import VehicleCreate
+from app.schemas.vehicle import VehicleCreate, VehicleSearchFilters
 
 
 class VehicleService:
@@ -20,3 +20,7 @@ class VehicleService:
         shows them with a disabled Purchase button.
         """
         return self.vehicles.list_all()
+
+    def search_vehicles(self, filters: VehicleSearchFilters) -> list[Vehicle]:
+        """Return vehicles matching the given filters (combined with AND)."""
+        return self.vehicles.search(**filters.model_dump())

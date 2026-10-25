@@ -37,3 +37,12 @@ class VehicleOut(BaseModel):
     category: str
     price: int
     quantity: int
+
+
+class VehicleSearchFilters(BaseModel):
+    """Query parameters of GET /api/vehicles/search.
+
+    Every filter is optional; the ones given are combined with AND.
+    """
+
+    make: str | None = None
