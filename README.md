@@ -6,6 +6,8 @@ A full-stack car dealership inventory management system built with FastAPI and R
 
 Users register and log in with JWT authentication. Logged-in users can browse every vehicle, search by make, model, category or price range, and add or update vehicles. Only admins can delete a vehicle. Each vehicle has an ID, make, model, category, price and quantity in stock. Any logged-in user can purchase a vehicle, which reduces its stock by one; a purchase at zero stock is rejected. Admins can also restock vehicles.
 
+The frontend, **Forecourt**, is a React single-page app styled with Tailwind. Buyers browse the lot, search and filter it, and buy cars; the Purchase button is disabled when a car is out of stock. Admins get an extra **Admin** page to add, edit, delete and restock vehicles.
+
 ## Setup
 
 ### Backend
@@ -25,12 +27,18 @@ The seed script is safe to run more than once. It never changes an existing admi
 
 ### Frontend
 
+Start the backend first (above), then in a second terminal:
+
 ```bash
 cd frontend
 npm install
-cp .env.example .env
+cp .env.example .env            # VITE_API_URL=http://localhost:8000
 npm run dev                     # http://localhost:5173
 ```
+
+The backend only accepts browser requests from the origins in `CORS_ORIGINS` (default `["http://localhost:5173"]`). If Vite starts on another port because 5173 is busy, stop the other server or add that origin to `CORS_ORIGINS` in `backend/.env`.
+
+Log in as the admin created by the seed script to see the **Admin** page, or register a buyer account at `/register`.
 
 ## Design Decisions
 
@@ -92,6 +100,27 @@ npm run dev                     # http://localhost:5173
 | Purchase and restock return the updated vehicle | The UI can update the card without a second request |
 | Errors are mapped in each route, not with global exception handlers | Same pattern as the earlier phases; centralising them is a possible refactor |
 
+### Frontend
+
+| Decision | Reason |
+|---|---|
+| Single-page app with React Router | One page load; real URLs keep the back button, refresh and bookmarks working; `ProtectedRoute` and `AdminRoute` guard `/` and `/admin` |
+| Route guards wait for `GET /api/auth/me` | On reload the token is known before the user is; without the wait, a logged-in user would be bounced to `/login` |
+| Token in `localStorage`, user from `/me` | Survives a reload; the server stays the source of truth for `is_admin`. Trade-off: scripts on the page can read `localStorage` (XSS); an httpOnly cookie would be safer but needs backend changes |
+| One Axios instance with the `fetch` adapter | Every request gets the Bearer header in one place. Under jsdom, MSW can't intercept Axios's default XMLHttpRequest adapter; fetch works in every modern browser |
+| Only a 401 logs the user out | A 403 (not an admin) or a 400 (sold out) means "not allowed" or "can't do that now", not "your login is invalid" |
+| Browser-side checks mirror the API's rules | Password 8 characters / 72 bytes (counted like Python), price ≥ ₹1, quantity ≥ 0, restock ≥ 1, `min_price ≤ max_price`. The user gets instant feedback; the API is still the real guard |
+| Empty search inputs are never sent; numbers are JSON numbers | The API answers `category=""` with 422 and treats an empty `make` as "match everything"; body integers are strict |
+| Edit sends only the changed fields, and nothing if none changed | `PUT` is a partial update and rejects `null` with 422 |
+| Stock shown is always the API's answer | After a purchase or restock the card shows the returned vehicle, not a local `count - 1`; a 400 on purchase (someone else bought the last one) reloads the list |
+| Purchase button disabled while a purchase is in flight | A double click can't buy two cars |
+| Delete asks for confirmation, with focus on "Keep it" | A stray Enter key can't delete a vehicle; Escape cancels |
+| Prices use `Intl.NumberFormat('en-IN')` | Indian digit grouping: ₹20,95,000 |
+| Category dropdown on every screen size | The mobile mockup shows chips; one control means one source of truth and one set of tests, and every category (including Electric) is reachable |
+| CORS allows a fixed list of origins, not `*` | Only our own frontend may call the API from a browser; no cookies are used, so credentials stay off |
+| Partial TDD on the frontend | Anything that makes a decision (disabled button, redirects, admin visibility, form rules, what is sent) was tested first; layout and colours were checked by eye |
+| MSW mocks the network; tests query by role and label | Tests check what the user sees and what is actually sent, so the API client is tested too; no snapshots or class names |
+
 ## API
 
 The health check is at `/health`; every other endpoint is under `/api`. Protected endpoints need the header `Authorization: Bearer <token>`.
@@ -125,12 +154,20 @@ Restock body: `{"quantity": 5}`. Purchase takes no body.
 
 Interactive docs: http://localhost:8000/docs. Log in, then use **Authorize** and paste the token.
 
+Browsers may only call the API from the origins in `CORS_ORIGINS` (see Setup).
+
 ## Tests
-Backend: 123 tests, 98% coverage.
+
+| Suite | Tools | Tests | Coverage |
+|---|---|---|---|
+| Backend | pytest, FastAPI `TestClient`, a temporary SQLite database per test | 127 | 98% |
+| Frontend | Vitest, React Testing Library, MSW (mocked API) | 106 | 95% of statements |
+
 ```bash
 cd backend && pytest
 cd backend && pytest --cov=app --cov-report=term-missing   # with coverage
 cd frontend && npm run test:run
+cd frontend && npm run coverage                            # with coverage
 ```
 
 ## Screenshots
@@ -138,8 +175,6 @@ cd frontend && npm run test:run
 _TODO_
 
 ## My AI Usage
-
-I used AI to plan the purchase and restock endpoints and to explain how to stop overselling. I wrote the first purchase tests, then saw the "read, check, save" version could sell the last car twice, so I refactored it into one conditional SQL update while keeping every test green. With the deadline close, I asked AI to write the remaining tests and code (purchase 404 and the restock rules) from my scenarios, and I reviewed each test before committing. I deliberately cut optional extras, such as a concurrency test and global exception handlers, to keep time for the frontend.
 
 ### Phase 1 – Authentication
 
@@ -149,10 +184,12 @@ I used AI to help understand the authentication flow, including password hashing
 
 I used AI as a pair-programming assistant to plan test scenarios, identify edge cases, and review the vehicle API's behaviour. I followed a test-first approach for creating, listing, searching, updating, and deleting vehicles, including validation, authentication, and admin permissions. I ran the test suite and lint checks, reviewed the results, and refined the tests to make sure they verified the intended behaviour rather than just passing.
 
-### Phase 3 – AI Usage
+### Phase 3 – Purchase and Restock
+
+I used AI to plan the purchase and restock endpoints and to explain how to stop overselling. I wrote the first purchase tests, then saw the "read, check, save" version could sell the last car twice, so I refactored it into one conditional SQL update while keeping every test green. With the deadline close, I asked AI to write the remaining tests and code (purchase 404 and the restock rules) from my scenarios, and I reviewed each test before committing. I deliberately cut optional extras, such as a concurrency test and global exception handlers, to keep time for the frontend.
 
 I used Claude as a pair-programming partner to understand and implement purchase and restock workflows. At my request, Claude helped write tests and code, which I reviewed and verified through test runs. This phase helped me understand atomic database updates and safe inventory management.
 
-### Phase 4 – AI Usage
+### Phase 4 – Frontend
 
 I used Claude as a pair-programming partner to build the React frontend, write tests and connect it to the FastAPI backend. I reviewed the implementation and used tests, build and lint checks, and browser testing to identify and fix issues. This helped me understand frontend-backend integration and the importance of verifying AI-generated code.
