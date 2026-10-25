@@ -1,1 +1,69 @@
 @import "tailwindcss";
+
+/*
+ * Forecourt theme (see docs/mockups/MOCKUPS.md): terracotta and sage on cream.
+ * Each --color-* here becomes a Tailwind class, e.g. bg-cream, text-terracotta.
+ */
+@theme {
+  --font-display: "Caprasimo", Georgia, serif;
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+
+  --color-cream: #f5eada;
+  --color-sand: #eadbc4;
+  --color-sand-deep: #ddc9ab;
+  --color-ink: #1f1b16;
+  --color-muted: #6f655a;
+
+  --color-terracotta: #c8723c;
+  --color-terracotta-dark: #a65a2a;
+  --color-terracotta-soft: #dcaa85;
+  --color-peach: #ffc6a3;
+  --color-peach-tint: #fde3d4;
+
+  --color-sage: #afc095;
+  --color-sage-tint: #e0edcb;
+  --color-sage-dark: #4c6339;
+
+  --color-danger: #9a3c12;
+  --color-danger-tint: #fdf0e6;
+}
+
+@layer base {
+  body {
+    @apply bg-cream font-sans text-ink antialiased;
+  }
+}
+
+/* Shared pieces, so every form looks the same. */
+@layer components {
+  .field-label {
+    @apply mb-1.5 block text-sm text-muted;
+  }
+
+  .field-input {
+    @apply w-full rounded-full border border-sand-deep bg-sand px-4 py-2.5 text-ink outline-none
+      placeholder:text-muted/70 focus:border-terracotta focus:ring-2 focus:ring-terracotta/25
+      aria-invalid:border-terracotta-dark;
+  }
+
+  .field-error {
+    @apply mt-1.5 px-4 text-sm text-danger;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-terracotta px-6 py-3
+      font-display text-cream transition hover:bg-terracotta-dark focus-visible:outline-2
+      focus-visible:outline-offset-2 focus-visible:outline-terracotta
+      disabled:cursor-not-allowed disabled:bg-terracotta-soft;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-sand-deep
+      bg-cream px-5 py-2.5 font-display text-ink transition hover:bg-sand
+      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta;
+  }
+
+  .text-link {
+    @apply text-terracotta-dark underline underline-offset-4 hover:text-terracotta;
+  }
+}
