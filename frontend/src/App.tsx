@@ -1,8 +1,40 @@
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { AppLayout } from './components/AppLayout'
+import { AuthProvider } from './context/AuthProvider'
+import { AdminPage } from './pages/AdminPage'
+import { DashboardPage } from './pages/DashboardPage'
+import { LoginPage } from './pages/LoginPage'
+import { RegisterPage } from './pages/RegisterPage'
+import { AdminRoute } from './routes/AdminRoute'
+import { ProtectedRoute } from './routes/ProtectedRoute'
+
+/**
+ * The single-page app: one HTML page, with React Router choosing which
+ * page component to show for the URL.
+ */
 function App() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100">
-      <h1 className="text-3xl font-bold text-slate-800">Car Dealership Inventory</h1>
-    </main>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          {/* The nav bar (AppLayout) wraps every logged-in page. */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<DashboardPage />} />
+            </Route>
+          </Route>
+          <Route element={<AdminRoute />}>
+            <Route element={<AppLayout />}>
+              <Route path="/admin" element={<AdminPage />} />
+            </Route>
+          </Route>
+          {/* Unknown URLs go home (and from there to /login if logged out). */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 

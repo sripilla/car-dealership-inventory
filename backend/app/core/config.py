@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     ADMIN_EMAIL: str = "admin@example.com"
     ADMIN_PASSWORD: str = "change-me"
+    # Browser origins allowed to call the API (the React dev server by
+    # default). In .env, write it as JSON: CORS_ORIGINS=["https://my.app"]
+    CORS_ORIGINS: list[str] = ["http://localhost:5173"]
 
 
 @lru_cache

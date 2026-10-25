@@ -17,3 +17,7 @@ https://claude.ai/share/30e28f68-fa41-451c-b6da-141ec6a36f5d
 ## 2026-10-25 – Claude (Phase 3: purchase and restock)
 
 https://claude.ai/share/1818e723-5ae7-4ec4-aba5-ae95afdbda2c
+
+## 2026-10-25 – Claude (Phase 4: frontend)
+
+https://claude.ai/share/b6ee251a-6722-4bfe-8ef7-537ed8c54abe
