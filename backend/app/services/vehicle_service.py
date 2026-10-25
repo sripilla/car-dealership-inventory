@@ -64,3 +64,11 @@ class VehicleService:
         if vehicle is None:
             raise VehicleNotFoundError(vehicle_id)
         return vehicle
+
+    def restock_vehicle(self, vehicle_id: int, amount: int) -> Vehicle:
+        """Add units to a vehicle's stock. Raises VehicleNotFoundError if unknown.
+
+        Who may restock is decided by the route (admin only), not here.
+        """
+        vehicle = self._get_or_raise(vehicle_id)
+        return self.vehicles.update(vehicle, {"quantity": vehicle.quantity + amount})

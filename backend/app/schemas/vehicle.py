@@ -95,3 +95,11 @@ class VehicleUpdate(BaseModel):
     category: VehicleCategory = None
     price: Price = None
     quantity: Quantity = None
+
+
+class RestockRequest(BaseModel):
+    """Body of POST /api/vehicles/{id}/restock."""
+
+    # At least 1 (so not the Quantity type, which allows 0): restocking
+    # 0 or a negative amount is a client mistake.
+    quantity: Annotated[int, Field(gt=0, strict=True)]

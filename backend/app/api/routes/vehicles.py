@@ -8,6 +8,7 @@ from app.api.deps import get_current_user, get_vehicle_service, require_admin
 from app.core.exceptions import OutOfStockError, VehicleNotFoundError
 from app.db.models import Vehicle
 from app.schemas.vehicle import (
+    RestockRequest,
     VehicleCreate,
     VehicleOut,
     VehicleSearchFilters,
@@ -131,10 +132,30 @@ def purchase_vehicle(
     """
     try:
         return vehicles.purchase_vehicle(vehicle_id)
+    except VehicleNotFoundError as exc:
+        raise _not_found(exc) from exc
     except OutOfStockError as exc:
-        # 400: the request can't be fulfilled as sent. The client should
-        # not retry it until the vehicle is restocked.
+        # 400: the request can't be fulfilled until the vehicle is restocked.
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vehicle is out of stock",
         ) from exc
+
+
+# Admin only, like delete: require_admin runs first, so a normal user gets
+# 403 even for an unknown id.
+@router.post(
+    "/{vehicle_id}/restock",
+    response_model=VehicleOut,
+    dependencies=[Depends(require_admin)],
+)
+def restock_vehicle(
+    vehicle_id: int,
+    payload: RestockRequest,
+    vehicles: Annotated[VehicleService, Depends(get_vehicle_service)],
+) -> Vehicle:
+    """Add stock to a vehicle. Admin only; 404 if unknown; 422 if quantity < 1."""
+    try:
+        return vehicles.restock_vehicle(vehicle_id, payload.quantity)
+    except VehicleNotFoundError as exc:
+        raise _not_found(exc) from exc
