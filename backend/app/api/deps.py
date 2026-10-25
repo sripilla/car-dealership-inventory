@@ -1,5 +1,5 @@
-"""FastAPI dependencies shared by routes: the auth service, the current user,
-and the admin check.
+"""FastAPI dependencies shared by routes: the auth and vehicle services, the
+current user, and the admin check.
 """
 
 from typing import Annotated
@@ -12,7 +12,9 @@ from app.core.security import InvalidTokenError
 from app.db.models import User
 from app.db.session import get_db
 from app.repositories.user_repository import UserRepository
+from app.repositories.vehicle_repository import VehicleRepository
 from app.services.auth_service import AuthService
+from app.services.vehicle_service import VehicleService
 
 # auto_error=False: we raise our own 401 instead of FastAPI's default error, so a
 # missing header, a non-Bearer scheme and a bad token all get the same response.
@@ -22,6 +24,11 @@ bearer_scheme = HTTPBearer(auto_error=False)
 def get_auth_service(db: Annotated[Session, Depends(get_db)]) -> AuthService:
     """Build an AuthService for this request, using the request's database session."""
     return AuthService(UserRepository(db))
+
+
+def get_vehicle_service(db: Annotated[Session, Depends(get_db)]) -> VehicleService:
+    """Build a VehicleService for this request, using the request's database session."""
+    return VehicleService(VehicleRepository(db))
 
 
 def _credentials_error() -> HTTPException:
