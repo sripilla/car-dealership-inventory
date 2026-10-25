@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from app.db.models import Vehicle
 
 VEHICLES_URL = "/api/vehicles"
+SEARCH_URL = "/api/vehicles/search"
 
 
 def valid_payload(**overrides):
@@ -244,3 +245,42 @@ def test_list_vehicles_without_token_returns_401(client):
 
     assert response.status_code == 401
     assert response.headers["www-authenticate"] == "Bearer"
+
+
+@pytest.mark.parametrize("make", ["toy", "TOYOTA", "yot"])
+def test_search_by_make_is_partial_and_case_insensitive(client, auth_headers, make):
+    toyota = create_vehicle(client, auth_headers, make="Toyota")
+    create_vehicle(client, auth_headers, make="Honda")
+
+    response = client.get(
+        SEARCH_URL,
+        params={"make": make},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    assert [vehicle["id"] for vehicle in response.json()] == [toyota["id"]]
+
+
+def test_search_by_make_without_token_returns_401(client):
+    response = client.get(
+        SEARCH_URL,
+        params={"make": "toy"},
+    )
+
+    assert response.status_code == 401
+    assert response.headers["www-authenticate"] == "Bearer"
+
+
+def test_search_by_make_treats_percent_as_literal(client, auth_headers):
+    create_vehicle(client, auth_headers, make="Toyota")
+    create_vehicle(client, auth_headers, make="Honda")
+
+    response = client.get(
+        SEARCH_URL,
+        params={"make": "%"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []
