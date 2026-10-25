@@ -660,3 +660,46 @@ def test_purchase_out_of_stock_returns_400_and_keeps_quantity(client, auth_heade
 
     listed = client.get(VEHICLES_URL, headers=auth_headers).json()
     assert listed == [vehicle]
+
+
+def restock_url(vehicle_id):
+    """URL to restock a vehicle, e.g. /api/vehicles/1/restock."""
+    return f"{vehicle_url(vehicle_id)}/restock"
+
+
+def test_purchase_unknown_vehicle_returns_404(client, auth_headers):
+    response = client.post(purchase_url(999), headers=auth_headers)
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Vehicle not found"}
+
+
+def test_admin_restock_increases_quantity(client, admin_headers):
+    vehicle = create_vehicle(client, admin_headers, quantity=2)
+
+    response = client.post(restock_url(vehicle["id"]), json={"quantity": 5}, headers=admin_headers)
+
+    assert response.status_code == 200
+    assert response.json() == vehicle | {"quantity": 7}
+    listed = client.get(VEHICLES_URL, headers=admin_headers).json()
+    assert listed == [vehicle | {"quantity": 7}]
+
+
+def test_restock_by_normal_user_returns_403(client, auth_headers):
+    vehicle = create_vehicle(client, auth_headers, quantity=2)
+
+    response = client.post(restock_url(vehicle["id"]), json={"quantity": 5}, headers=auth_headers)
+
+    assert response.status_code == 403
+    listed = client.get(VEHICLES_URL, headers=auth_headers).json()
+    assert listed == [vehicle]
+
+
+def test_restock_with_zero_quantity_returns_422(client, admin_headers):
+    vehicle = create_vehicle(client, admin_headers, quantity=2)
+
+    response = client.post(restock_url(vehicle["id"]), json={"quantity": 0}, headers=admin_headers)
+
+    assert response.status_code == 422
+    listed = client.get(VEHICLES_URL, headers=admin_headers).json()
+    assert listed == [vehicle]
