@@ -570,3 +570,53 @@ def test_update_vehicle_trims_surrounding_whitespace(client, auth_headers):
 
     assert response.status_code == 200
     assert response.json()["make"] == "Honda"
+
+
+def test_admin_can_delete_vehicle(client, auth_headers, admin_headers):
+    vehicle = create_vehicle(client, auth_headers)
+    url = f"{VEHICLES_URL}/{vehicle['id']}"
+
+    response = client.delete(url, headers=admin_headers)
+
+    assert response.status_code == 204
+    assert response.content == b""
+
+    list_response = client.get(VEHICLES_URL, headers=auth_headers)
+    vehicle_ids = [item["id"] for item in list_response.json()]
+    assert vehicle["id"] not in vehicle_ids
+
+
+def test_normal_user_cannot_delete_vehicle(client, auth_headers):
+    vehicle = create_vehicle(client, auth_headers)
+    url = f"{VEHICLES_URL}/{vehicle['id']}"
+
+    response = client.delete(url, headers=auth_headers)
+
+    assert response.status_code == 403
+
+    list_response = client.get(VEHICLES_URL, headers=auth_headers)
+    vehicle_ids = [item["id"] for item in list_response.json()]
+    assert vehicle["id"] in vehicle_ids
+
+
+def test_delete_unknown_vehicle_returns_404(client, admin_headers):
+    response = client.delete(
+        f"{VEHICLES_URL}/999",
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 404
+
+
+def test_delete_vehicle_without_token_returns_401(client, auth_headers):
+    vehicle = create_vehicle(client, auth_headers)
+    url = f"{VEHICLES_URL}/{vehicle['id']}"
+
+    response = client.delete(url)
+
+    assert response.status_code == 401
+    assert response.headers["www-authenticate"] == "Bearer"
+
+    list_response = client.get(VEHICLES_URL, headers=auth_headers)
+    vehicle_ids = [item["id"] for item in list_response.json()]
+    assert vehicle["id"] in vehicle_ids
