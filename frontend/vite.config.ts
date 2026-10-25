@@ -13,5 +13,8 @@ export default defineConfig({
     globals: true,
     // Runs before every test file.
     setupFiles: './src/test/setup.ts',
+    // A fixed API address for tests, so they never depend on your local .env
+    // (which isn't committed) and never reach the real backend.
+    env: { VITE_API_URL: 'http://api.test' },
   },
 })
