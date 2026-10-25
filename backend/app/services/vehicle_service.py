@@ -1,6 +1,6 @@
 """Business rules for vehicles."""
 
-from app.core.exceptions import VehicleNotFoundError
+from app.core.exceptions import OutOfStockError, VehicleNotFoundError
 from app.db.models import Vehicle
 from app.repositories.vehicle_repository import VehicleRepository
 from app.schemas.vehicle import VehicleCreate, VehicleSearchFilters, VehicleUpdate
@@ -46,9 +46,14 @@ class VehicleService:
     def purchase_vehicle(self, vehicle_id: int) -> Vehicle:
         """Buy one unit of a vehicle, reducing its stock by one.
 
-        Raises VehicleNotFoundError if no vehicle has this id.
+        Raises VehicleNotFoundError if no vehicle has this id, and
+        OutOfStockError if its stock is 0 (the stock is left unchanged).
         """
         vehicle = self._get_or_raise(vehicle_id)
+        # Checked here, not only in the UI: the API can be called directly,
+        # and stock must never go below 0.
+        if vehicle.quantity < 1:
+            raise OutOfStockError(vehicle_id)
         return self.vehicles.update(vehicle, {"quantity": vehicle.quantity - 1})
 
     def _get_or_raise(self, vehicle_id: int) -> Vehicle:

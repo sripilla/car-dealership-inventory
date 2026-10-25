@@ -24,3 +24,7 @@ class AdminSeedConflictError(Exception):
 
 class VehicleNotFoundError(Exception):
     """Raised when no vehicle has the requested id."""
+
+
+class OutOfStockError(Exception):
+    """Raised when purchasing a vehicle that has no units left in stock."""

@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.deps import get_current_user, get_vehicle_service, require_admin
-from app.core.exceptions import VehicleNotFoundError
+from app.core.exceptions import OutOfStockError, VehicleNotFoundError
 from app.db.models import Vehicle
 from app.schemas.vehicle import (
     VehicleCreate,
@@ -127,6 +127,14 @@ def purchase_vehicle(
     vehicles: Annotated[VehicleService, Depends(get_vehicle_service)],
 ) -> Vehicle:
     """Buy one unit of a vehicle and return it with the reduced stock.
-    Requires a logged-in user.
+    Returns 400 if it is out of stock. Requires a logged-in user.
     """
-    return vehicles.purchase_vehicle(vehicle_id)
+    try:
+        return vehicles.purchase_vehicle(vehicle_id)
+    except OutOfStockError as exc:
+        # 400: the request can't be fulfilled as sent. The client should
+        # not retry it until the vehicle is restocked.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vehicle is out of stock",
+        ) from exc
