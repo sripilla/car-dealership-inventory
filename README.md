@@ -2,7 +2,9 @@
 
 ## Overview
 
-A full-stack car dealership inventory management system built with FastAPI and React. Developed using Test-Driven Development (TDD), the project aims to provide a reliable foundation for managing dealership inventory, with authentication and inventory features implemented incrementally.
+A full-stack car dealership inventory management system built with FastAPI and React, developed using Test-Driven Development (TDD).
+
+Users register and log in with JWT authentication. Logged-in users can browse every vehicle, search by make, model, category or price range, and add or update vehicles. Only admins can delete a vehicle. Each vehicle has an ID, make, model, category, price and quantity in stock. Purchasing and restocking follow in the next phase.
 
 ## Setup
 
@@ -32,6 +34,8 @@ npm run dev                     # http://localhost:5173
 
 ## Design Decisions
 
+### General
+
 | Decision | Reason |
 |---|---|
 | FastAPI backend | Builds REST APIs with built-in validation and automatic Swagger docs |
@@ -40,7 +44,13 @@ npm run dev                     # http://localhost:5173
 | Test-Driven Development | Every rule starts as a failing test; the commit history shows Red → Green → Refactor |
 | Git and GitHub | Tracks changes and keeps a readable commit history |
 | Routes → Services → Repositories | Routes handle HTTP, services hold the rules, repositories talk to the database; each is small and testable |
+| Domain errors in services, HTTP codes in routes | Services raise errors such as `VehicleNotFoundError` and never know about status codes, so they stay testable without HTTP |
 | Alembic migrations | Every schema change is versioned in git and reviewable, and can be rolled back; `create_all` can't alter existing tables |
+
+### Authentication
+
+| Decision | Reason |
+|---|---|
 | Emails stored lowercase | `Siri@Example.com` and `siri@example.com` are one account, and the unique index enforces it |
 | Password limit of 72 bytes | bcrypt's limit; counted in bytes, not characters, because `é` is 2 bytes |
 | Same 401 for a wrong password and an unknown email | The API doesn't reveal which emails have accounts |
@@ -48,9 +58,33 @@ npm run dev                     # http://localhost:5173
 | Seed script refuses to promote an existing user | Otherwise whoever registered the admin email first would become admin |
 | `GET /api/auth/me` instead of user data in the JWT | The server stays the source of truth for `is_admin`, and the token stays small |
 
+### Vehicles
+
+| Decision | Reason |
+|---|---|
+| Price stored as integer rupees | SQLite has no exact decimal type, and car prices never use paise, so there is no rounding |
+| Price must be > 0; quantity must be ≥ 0 | A free car is almost certainly a typo; quantity 0 is a normal "out of stock" state |
+| Strict integers in request bodies | `"2"` or `true` is rejected instead of being silently converted |
+| Make and model are trimmed; blank values are rejected | `"  Toyota "` is stored as `Toyota`; `""` and `"   "` return 422 |
+| Fixed categories: Sedan, SUV, Hatchback, Electric | The UI uses a dropdown. Electric is a powertrain rather than a body type, but it is kept as its own category so EVs can be browsed together |
+| Category matching is exact and case-sensitive | Values come from the dropdown; `sedan` or `Truck` returns 422 |
+| Category is plain text in the database, validated by the API | Adding a category needs no migration; responses don't validate it, so old rows can never break a listing |
+| Creating and updating need a login, not admin | Matches the API spec; the UI shows those forms to admins only |
+| Deleting is admin-only | Matches the API spec. The admin check runs before the lookup, so a normal user gets 403 even for an unknown id and can't discover which ids exist |
+| The list includes out-of-stock vehicles, ordered by id | The UI shows them with a disabled Purchase button; an explicit `ORDER BY` keeps the order stable on any database |
+| Search on make and model is partial and case-insensitive | `toy`, `TOYOTA` and `yot` all match Toyota |
+| `%` and `_` in a search are matched literally | Otherwise searching `%` would match every vehicle (they are SQL `LIKE` wildcards) |
+| Search filters combine with AND | Each filter narrows the results; no filters returns every vehicle |
+| Price range is inclusive; `min_price > max_price` returns 422 | An impossible range is a client mistake, and an empty result would hide it |
+| Unknown search parameters return 422 | A typo such as `?modle=cam` is reported instead of silently returning every vehicle |
+| `PUT` performs a partial update | The spec names `PUT`, but only the fields sent are changed (PATCH-like). Omitted fields keep their values and `{}` changes nothing |
+| An explicit `null` in an update returns 422 | Omitting a field and sending `null` are different. Every column is required, so `null` is rejected instead of crashing on the database's NOT NULL constraint |
+
 ## API
 
-All endpoints are prefixed with `/api`. Protected endpoints need the header `Authorization: Bearer <token>`.
+The health check is at `/health`; every other endpoint is under `/api`. Protected endpoints need the header `Authorization: Bearer <token>`.
+
+### Auth
 
 | Method | Endpoint | Auth | Success | Errors |
 |---|---|---|---|---|
@@ -58,6 +92,20 @@ All endpoints are prefixed with `/api`. Protected endpoints need the header `Aut
 | `POST` | `/api/auth/register` | none | `201` `{id, email, is_admin}` | `409` email taken, `422` invalid input |
 | `POST` | `/api/auth/login` | none | `200` `{access_token, token_type}` | `401` wrong email or password |
 | `GET` | `/api/auth/me` | Bearer | `200` `{id, email, is_admin}` | `401` missing, invalid or expired token |
+
+### Vehicles
+
+A vehicle is returned as `{id, make, model, category, price, quantity}`.
+
+| Method | Endpoint | Auth | Success | Errors |
+|---|---|---|---|---|
+| `POST` | `/api/vehicles` | Bearer | `201` vehicle | `401`, `422` invalid input |
+| `GET` | `/api/vehicles` | Bearer | `200` list of all vehicles, ordered by id | `401` |
+| `GET` | `/api/vehicles/search` | Bearer | `200` list of matching vehicles | `401`, `422` invalid or unknown parameter, or `min_price > max_price` |
+| `PUT` | `/api/vehicles/{id}` | Bearer | `200` updated vehicle | `401`, `404` unknown id, `422` invalid value or `null` |
+| `DELETE` | `/api/vehicles/{id}` | Bearer, admin | `204` no body | `401`, `403` not an admin, `404` unknown id |
+
+Search parameters, all optional: `make`, `model` (partial, case-insensitive), `category` (exact), `min_price`, `max_price` (inclusive). Example: `/api/vehicles/search?make=toy&category=Sedan&max_price=2500000`.
 
 Interactive docs: http://localhost:8000/docs. Log in, then use **Authorize** and paste the token.
 
@@ -75,8 +123,12 @@ _TODO_
 
 ## My AI Usage
 
-I used AI as a development assistant to clarify concepts and guide the implementation process. I checked the results of commands and tests as I worked. I intend to continue using a test-first approach, reviewing AI suggestions critically and ensuring that I understand the code I commit.
+I used AI as a pair-programming assistant and mentor to clarify concepts, discuss implementation choices, and guide my TDD workflow. I reviewed the suggestions, ran the tests and other checks myself, and focused on understanding the code before committing it.
 
 ### Phase 1 – Authentication
 
-_TODO: write in my own words._
+I used AI to help understand the authentication flow, including password hashing, JWT authentication, database access, and error handling. I wrote and ran tests to verify the expected behaviour, investigated failures, and used the Red–Green–Refactor cycle to implement and improve the solution.
+
+### Phase 2 – Vehicle Management
+
+I used AI as a pair-programming assistant to plan test scenarios, identify edge cases, and review the vehicle API's behaviour. I followed a test-first approach for creating, listing, searching, updating, and deleting vehicles, including validation, authentication, and admin permissions. I ran the test suite and lint checks, reviewed the results, and refined the tests to make sure they verified the intended behaviour rather than just passing.

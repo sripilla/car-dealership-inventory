@@ -1,0 +1,97 @@
+"""Request and response shapes for vehicles."""
+
+from typing import Annotated, Self
+
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+
+from app.core.categories import VehicleCategory
+
+# Field rules shared by create and update, so the two can never disagree.
+
+# Whitespace is stripped *before* the length check, so "   " becomes "" and is
+# rejected, and "  Toyota " is stored as "Toyota".
+NonBlankStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+# strict=True: only real JSON integers are accepted. Pydantic's default "lax"
+# mode would turn "2" into 2 and true into 1.
+Price = Annotated[int, Field(gt=0, strict=True)]  # whole rupees; a free car is a typo
+Quantity = Annotated[int, Field(ge=0, strict=True)]  # 0 is valid: out of stock
+
+
+class VehicleCreate(BaseModel):
+    """Body of POST /api/vehicles."""
+
+    make: NonBlankStr
+    model: NonBlankStr
+    category: VehicleCategory
+    price: Price
+    quantity: Quantity
+
+
+class VehicleOut(BaseModel):
+    """A vehicle as returned by the API."""
+
+    # Lets FastAPI build this directly from a SQLAlchemy Vehicle object.
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    make: str
+    model: str
+    # Plain str on output: rows are validated on the way in, and a response
+    # should never fail just because the category list changed later.
+    category: str
+    price: int
+    quantity: int
+
+
+class VehicleSearchFilters(BaseModel):
+    """Query parameters of GET /api/vehicles/search.
+
+    Every filter is optional; the ones given are combined with AND.
+    """
+
+    # Unknown query params get 422 instead of being silently ignored, so a
+    # typo like ?modle=cam is reported rather than returning every vehicle.
+    model_config = ConfigDict(extra="forbid")
+
+    make: str | None = None  # partial, case-insensitive
+    model: str | None = None  # partial, case-insensitive
+    # The enum rejects unknown or wrong-case values with 422, the same rule
+    # as create, so a typo is reported instead of silently matching nothing.
+    category: VehicleCategory | None = None
+    # Not the strict Price type: query-string values always arrive as text, so
+    # "2000000" must be converted. "abc" still fails with 422.
+    min_price: int | None = None  # inclusive
+    max_price: int | None = None  # inclusive
+
+    @model_validator(mode="after")
+    def check_price_range(self) -> Self:
+        """Reject min_price > max_price: an impossible range is a client mistake,
+        and an empty result would hide it.
+        """
+        if (
+            self.min_price is not None
+            and self.max_price is not None
+            and self.min_price > self.max_price
+        ):
+            raise ValueError("min_price must not be greater than max_price")
+        return self
+
+
+class VehicleUpdate(BaseModel):
+    """Body of PUT /api/vehicles/{id}: a partial update.
+
+    Omitted fields keep their current values; supplied fields follow the
+    same rules as VehicleCreate (the same shared types).
+
+    Each field is *optional* but not *nullable*: the type has no "| None",
+    so an explicit null fails validation with 422. The None default is used
+    only when a field is omitted; Pydantic doesn't validate defaults, and the
+    service's model_dump(exclude_unset=True) drops omitted fields, so None is
+    never written to the database.
+    """
+
+    make: NonBlankStr = None
+    model: NonBlankStr = None
+    category: VehicleCategory = None
+    price: Price = None
+    quantity: Quantity = None

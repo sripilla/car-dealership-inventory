@@ -13,6 +13,8 @@ import app.db.models  # noqa: F401  (registers every table before create_all)
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
+from app.repositories.user_repository import UserRepository
+from app.services.auth_service import AuthService
 
 
 @pytest.fixture
@@ -72,6 +74,29 @@ def auth_headers(client, registered_user):
             "email": registered_user["email"],
             "password": registered_user["password"],
         },
+    )
+
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def admin_headers(client, db_session):
+    """Return authorization headers for an admin.
+
+    The admin is created with the same AuthService.ensure_admin the seed
+    script uses (registration can never create one), then logs in through
+    the real endpoint. Fixed test credentials, so tests never depend on .env.
+    """
+    email = "admin@example.com"
+    password = "AdminPassword123!"
+    AuthService(UserRepository(db_session)).ensure_admin(email, password)
+
+    response = client.post(
+        "/api/auth/login",
+        json={"email": email, "password": password},
     )
 
     assert response.status_code == 200
