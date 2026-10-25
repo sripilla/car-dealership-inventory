@@ -487,3 +487,14 @@ def test_update_vehicle_without_token_returns_401(client, auth_headers):
 
     assert response.status_code == 401
     assert response.headers["www-authenticate"] == "Bearer"
+
+
+def test_update_unknown_vehicle_returns_404(client, auth_headers):
+    response = client.put(
+        f"{VEHICLES_URL}/999",
+        json={"price": 4200000},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Vehicle not found"}
