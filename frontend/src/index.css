@@ -40,8 +40,10 @@
     @apply mb-1.5 block text-sm text-muted;
   }
 
+  /* A fixed height, so a <select> lines up with the text inputs beside it
+     (browsers draw selects a few pixels taller by default). */
   .field-input {
-    @apply w-full rounded-full border border-sand-deep bg-sand px-4 py-2.5 text-ink outline-none
+    @apply h-11 w-full rounded-full border border-sand-deep bg-sand px-4 py-2.5 text-ink outline-none
       placeholder:text-muted/70 focus:border-terracotta focus:ring-2 focus:ring-terracotta/25
       aria-invalid:border-terracotta-dark;
   }
