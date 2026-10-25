@@ -1,6 +1,6 @@
 """Database access for vehicles. No business rules live here."""
 
-from sqlalchemy import ColumnElement, select
+from sqlalchemy import ColumnElement, select, update
 from sqlalchemy.orm import Session
 
 from app.db.models import Vehicle
@@ -40,6 +40,25 @@ class VehicleRepository:
         """Permanently remove a vehicle."""
         self.db.delete(vehicle)
         self.db.commit()
+
+    def decrement_stock(self, vehicle: Vehicle) -> bool:
+        """Reduce the vehicle's quantity by one, but only if it is in stock.
+
+        Returns True if a unit was taken, False if the stock was already 0
+        (nothing is changed). The vehicle is refreshed either way.
+        """
+        # One conditional UPDATE instead of "read, check, then save": the
+        # database checks and subtracts in a single step, so two buyers of
+        # the last unit can't both see quantity 1 and both succeed. If the
+        # WHERE matches no row, the vehicle was out of stock.
+        result = self.db.execute(
+            update(Vehicle)
+            .where(Vehicle.id == vehicle.id, Vehicle.quantity >= 1)
+            .values(quantity=Vehicle.quantity - 1)
+        )
+        self.db.commit()
+        self.db.refresh(vehicle)  # reload the quantity the database now holds
+        return result.rowcount == 1
 
     def list_all(self) -> list[Vehicle]:
         """Return every vehicle, including out-of-stock ones, ordered by id.
