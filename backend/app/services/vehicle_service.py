@@ -2,7 +2,7 @@
 
 from app.db.models import Vehicle
 from app.repositories.vehicle_repository import VehicleRepository
-from app.schemas.vehicle import VehicleCreate, VehicleSearchFilters
+from app.schemas.vehicle import VehicleCreate, VehicleSearchFilters, VehicleUpdate
 
 
 class VehicleService:
@@ -24,3 +24,12 @@ class VehicleService:
     def search_vehicles(self, filters: VehicleSearchFilters) -> list[Vehicle]:
         """Return vehicles matching the given filters (combined with AND)."""
         return self.vehicles.search(**filters.model_dump())
+
+    def update_vehicle(self, vehicle_id: int, data: VehicleUpdate) -> Vehicle:
+        """Apply a partial update: only fields the client sent are changed.
+
+        exclude_unset=True drops fields that were omitted from the request,
+        so they keep their current values; {} therefore changes nothing.
+        """
+        vehicle = self.vehicles.get_by_id(vehicle_id)
+        return self.vehicles.update(vehicle, data.model_dump(exclude_unset=True))

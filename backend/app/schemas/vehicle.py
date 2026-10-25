@@ -71,3 +71,18 @@ class VehicleSearchFilters(BaseModel):
         ):
             raise ValueError("min_price must not be greater than max_price")
         return self
+
+
+class VehicleUpdate(BaseModel):
+    """Body of PUT /api/vehicles/{id}: a partial update.
+
+    Every field is optional. Only fields the client actually sends are
+    applied (see model_dump(exclude_unset=True) in the service); omitted
+    fields keep their current values.
+    """
+
+    make: str | None = None
+    model: str | None = None
+    category: VehicleCategory | None = None
+    price: int | None = None
+    quantity: int | None = None

@@ -20,6 +20,22 @@ class VehicleRepository:
         self.db.refresh(vehicle)  # load id and created_at, which the database filled in
         return vehicle
 
+    def get_by_id(self, vehicle_id: int) -> Vehicle | None:
+        """Return the vehicle with this primary key, or None."""
+        return self.db.get(Vehicle, vehicle_id)
+
+    def update(self, vehicle: Vehicle, changes: dict[str, object]) -> Vehicle:
+        """Apply the given field changes to a vehicle and save it.
+
+        Only keys present in changes are written; callers decide which
+        fields those are (an empty dict saves nothing new).
+        """
+        for field, value in changes.items():
+            setattr(vehicle, field, value)
+        self.db.commit()
+        self.db.refresh(vehicle)
+        return vehicle
+
     def list_all(self) -> list[Vehicle]:
         """Return every vehicle, including out-of-stock ones, ordered by id.
 

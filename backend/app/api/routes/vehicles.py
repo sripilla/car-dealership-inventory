@@ -6,7 +6,12 @@ from fastapi import APIRouter, Depends, Query, status
 
 from app.api.deps import get_current_user, get_vehicle_service
 from app.db.models import Vehicle
-from app.schemas.vehicle import VehicleCreate, VehicleOut, VehicleSearchFilters
+from app.schemas.vehicle import (
+    VehicleCreate,
+    VehicleOut,
+    VehicleSearchFilters,
+    VehicleUpdate,
+)
 from app.services.vehicle_service import VehicleService
 
 router = APIRouter(prefix="/api/vehicles", tags=["vehicles"])
@@ -58,3 +63,19 @@ def search_vehicles(
     logged-in user.
     """
     return vehicles.search_vehicles(filters)
+
+
+# PUT as named in the spec, with PATCH-like partial-update behaviour: only the
+# fields sent are changed (see VehicleService.update_vehicle).
+@router.put(
+    "/{vehicle_id}",
+    response_model=VehicleOut,
+    dependencies=[Depends(get_current_user)],
+)
+def update_vehicle(
+    vehicle_id: int,
+    payload: VehicleUpdate,
+    vehicles: Annotated[VehicleService, Depends(get_vehicle_service)],
+) -> Vehicle:
+    """Update some or all of a vehicle's fields. Requires a logged-in user."""
+    return vehicles.update_vehicle(vehicle_id, payload)
