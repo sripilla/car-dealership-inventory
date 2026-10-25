@@ -45,6 +45,10 @@ class VehicleSearchFilters(BaseModel):
     Every filter is optional; the ones given are combined with AND.
     """
 
+    # Unknown query params get 422 instead of being silently ignored, so a
+    # typo like ?modle=cam is reported rather than returning every vehicle.
+    model_config = ConfigDict(extra="forbid")
+
     make: str | None = None  # partial, case-insensitive
     model: str | None = None  # partial, case-insensitive
     # The enum rejects unknown or wrong-case values with 422, the same rule
