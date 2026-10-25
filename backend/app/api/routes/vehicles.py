@@ -53,5 +53,7 @@ def search_vehicles(
     filters: Annotated[VehicleSearchFilters, Query()],
     vehicles: Annotated[VehicleService, Depends(get_vehicle_service)],
 ) -> list[Vehicle]:
-    """Search vehicles by make (partial, case-insensitive). Requires a logged-in user."""
+    """Search vehicles by make or model (partial, case-insensitive) or category
+    (exact). Filters combine with AND. Requires a logged-in user.
+    """
     return vehicles.search_vehicles(filters)

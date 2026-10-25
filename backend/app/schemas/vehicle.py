@@ -45,4 +45,8 @@ class VehicleSearchFilters(BaseModel):
     Every filter is optional; the ones given are combined with AND.
     """
 
-    make: str | None = None
+    make: str | None = None  # partial, case-insensitive
+    model: str | None = None  # partial, case-insensitive
+    # The enum rejects unknown or wrong-case values with 422, the same rule
+    # as create, so a typo is reported instead of silently matching nothing.
+    category: VehicleCategory | None = None
