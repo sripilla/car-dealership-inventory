@@ -28,3 +28,15 @@ def create_vehicle(
 ) -> Vehicle:
     """Add a vehicle to the inventory. Requires a logged-in user (401 otherwise)."""
     return vehicles.create_vehicle(payload)
+
+
+@router.get(
+    "",
+    response_model=list[VehicleOut],
+    dependencies=[Depends(get_current_user)],
+)
+def list_vehicles(
+    vehicles: Annotated[VehicleService, Depends(get_vehicle_service)],
+) -> list[Vehicle]:
+    """List every vehicle, including out-of-stock ones. Requires a logged-in user."""
+    return vehicles.list_vehicles()
