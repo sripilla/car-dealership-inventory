@@ -20,6 +20,29 @@ def valid_payload(**overrides):
     } | overrides
 
 
+def create_vehicle(client, headers, **overrides):
+    """Create a vehicle through the API and return its JSON body."""
+    response = client.post(
+        VEHICLES_URL,
+        json=valid_payload(**overrides),
+        headers=headers,
+    )
+    assert response.status_code == 201
+    return response.json()
+
+
+def vehicle_url(vehicle_id):
+    """URL of a single vehicle, e.g. /api/vehicles/1."""
+    return f"{VEHICLES_URL}/{vehicle_id}"
+
+
+def listed_ids(client, headers):
+    """Ids of every vehicle GET /api/vehicles returns, in order."""
+    response = client.get(VEHICLES_URL, headers=headers)
+    assert response.status_code == 200
+    return [vehicle["id"] for vehicle in response.json()]
+
+
 def test_create_vehicle_with_valid_data_returns_201(client, auth_headers):
     payload = valid_payload()
 
@@ -202,17 +225,6 @@ def test_create_vehicle_accepts_each_allowed_category(client, auth_headers, cate
 
     assert response.status_code == 201
     assert response.json()["category"] == category
-
-
-def create_vehicle(client, headers, **overrides):
-    """Create a vehicle through the API and return its JSON body."""
-    response = client.post(
-        VEHICLES_URL,
-        json=valid_payload(**overrides),
-        headers=headers,
-    )
-    assert response.status_code == 201
-    return response.json()
 
 
 def test_list_vehicles_with_empty_database_returns_empty_list(client, auth_headers):
@@ -449,7 +461,7 @@ def test_search_with_unknown_parameter_returns_422(client, auth_headers, name, v
 
 def test_update_vehicle_changes_only_supplied_fields(client, auth_headers):
     vehicle = create_vehicle(client, auth_headers)
-    url = f"{VEHICLES_URL}/{vehicle['id']}"
+    url = vehicle_url(vehicle["id"])
 
     response = client.put(
         url,
@@ -467,7 +479,7 @@ def test_update_vehicle_changes_only_supplied_fields(client, auth_headers):
 
 def test_update_vehicle_with_empty_body_changes_nothing(client, auth_headers):
     vehicle = create_vehicle(client, auth_headers)
-    url = f"{VEHICLES_URL}/{vehicle['id']}"
+    url = vehicle_url(vehicle["id"])
 
     response = client.put(
         url,
@@ -481,7 +493,7 @@ def test_update_vehicle_with_empty_body_changes_nothing(client, auth_headers):
 
 def test_update_vehicle_without_token_returns_401(client, auth_headers):
     vehicle = create_vehicle(client, auth_headers)
-    url = f"{VEHICLES_URL}/{vehicle['id']}"
+    url = vehicle_url(vehicle["id"])
 
     response = client.put(url, json={"price": 4200000})
 
@@ -491,7 +503,7 @@ def test_update_vehicle_without_token_returns_401(client, auth_headers):
 
 def test_update_unknown_vehicle_returns_404(client, auth_headers):
     response = client.put(
-        f"{VEHICLES_URL}/999",
+        vehicle_url(999),
         json={"price": 4200000},
         headers=auth_headers,
     )
@@ -521,7 +533,7 @@ def test_update_unknown_vehicle_returns_404(client, auth_headers):
 )
 def test_update_vehicle_with_invalid_value_returns_422(client, auth_headers, body):
     vehicle = create_vehicle(client, auth_headers)
-    url = f"{VEHICLES_URL}/{vehicle['id']}"
+    url = vehicle_url(vehicle["id"])
 
     response = client.put(url, json=body, headers=auth_headers)
 
@@ -530,7 +542,7 @@ def test_update_vehicle_with_invalid_value_returns_422(client, auth_headers, bod
 
 def test_update_vehicle_with_invalid_category_returns_422(client, auth_headers):
     vehicle = create_vehicle(client, auth_headers)
-    url = f"{VEHICLES_URL}/{vehicle['id']}"
+    url = vehicle_url(vehicle["id"])
 
     response = client.put(
         url,
@@ -547,7 +559,7 @@ def test_update_vehicle_with_invalid_category_returns_422(client, auth_headers):
 )
 def test_update_vehicle_with_null_field_returns_422(client, auth_headers, field):
     vehicle = create_vehicle(client, auth_headers)
-    url = f"{VEHICLES_URL}/{vehicle['id']}"
+    url = vehicle_url(vehicle["id"])
 
     response = client.put(
         url,
@@ -560,7 +572,7 @@ def test_update_vehicle_with_null_field_returns_422(client, auth_headers, field)
 
 def test_update_vehicle_trims_surrounding_whitespace(client, auth_headers):
     vehicle = create_vehicle(client, auth_headers)
-    url = f"{VEHICLES_URL}/{vehicle['id']}"
+    url = vehicle_url(vehicle["id"])
 
     response = client.put(
         url,
@@ -574,34 +586,30 @@ def test_update_vehicle_trims_surrounding_whitespace(client, auth_headers):
 
 def test_admin_can_delete_vehicle(client, auth_headers, admin_headers):
     vehicle = create_vehicle(client, auth_headers)
-    url = f"{VEHICLES_URL}/{vehicle['id']}"
+    url = vehicle_url(vehicle["id"])
 
     response = client.delete(url, headers=admin_headers)
 
     assert response.status_code == 204
     assert response.content == b""
 
-    list_response = client.get(VEHICLES_URL, headers=auth_headers)
-    vehicle_ids = [item["id"] for item in list_response.json()]
-    assert vehicle["id"] not in vehicle_ids
+    assert vehicle["id"] not in listed_ids(client, auth_headers)
 
 
 def test_normal_user_cannot_delete_vehicle(client, auth_headers):
     vehicle = create_vehicle(client, auth_headers)
-    url = f"{VEHICLES_URL}/{vehicle['id']}"
+    url = vehicle_url(vehicle["id"])
 
     response = client.delete(url, headers=auth_headers)
 
     assert response.status_code == 403
 
-    list_response = client.get(VEHICLES_URL, headers=auth_headers)
-    vehicle_ids = [item["id"] for item in list_response.json()]
-    assert vehicle["id"] in vehicle_ids
+    assert vehicle["id"] in listed_ids(client, auth_headers)
 
 
 def test_delete_unknown_vehicle_returns_404(client, admin_headers):
     response = client.delete(
-        f"{VEHICLES_URL}/999",
+        vehicle_url(999),
         headers=admin_headers,
     )
 
@@ -610,13 +618,10 @@ def test_delete_unknown_vehicle_returns_404(client, admin_headers):
 
 def test_delete_vehicle_without_token_returns_401(client, auth_headers):
     vehicle = create_vehicle(client, auth_headers)
-    url = f"{VEHICLES_URL}/{vehicle['id']}"
+    url = vehicle_url(vehicle["id"])
 
     response = client.delete(url)
 
     assert response.status_code == 401
     assert response.headers["www-authenticate"] == "Bearer"
-
-    list_response = client.get(VEHICLES_URL, headers=auth_headers)
-    vehicle_ids = [item["id"] for item in list_response.json()]
-    assert vehicle["id"] in vehicle_ids
+    assert vehicle["id"] in listed_ids(client, auth_headers)
