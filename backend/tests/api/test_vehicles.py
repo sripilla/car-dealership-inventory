@@ -201,3 +201,46 @@ def test_create_vehicle_accepts_each_allowed_category(client, auth_headers, cate
 
     assert response.status_code == 201
     assert response.json()["category"] == category
+
+
+def create_vehicle(client, headers, **overrides):
+    """Create a vehicle through the API and return its JSON body."""
+    response = client.post(
+        VEHICLES_URL,
+        json=valid_payload(**overrides),
+        headers=headers,
+    )
+    assert response.status_code == 201
+    return response.json()
+
+
+def test_list_vehicles_with_empty_database_returns_empty_list(client, auth_headers):
+    response = client.get(VEHICLES_URL, headers=auth_headers)
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_list_vehicles_returns_all_in_id_order(client, auth_headers):
+    first = create_vehicle(client, auth_headers, make="Toyota")
+    second = create_vehicle(client, auth_headers, make="Honda", quantity=0)
+    third = create_vehicle(client, auth_headers, make="Ford")
+
+    response = client.get(VEHICLES_URL, headers=auth_headers)
+
+    assert response.status_code == 200
+
+    body = response.json()
+    assert [vehicle["id"] for vehicle in body] == [
+        first["id"],
+        second["id"],
+        third["id"],
+    ]
+    assert body[1]["quantity"] == 0
+
+
+def test_list_vehicles_without_token_returns_401(client):
+    response = client.get(VEHICLES_URL)
+
+    assert response.status_code == 401
+    assert response.headers["www-authenticate"] == "Bearer"
