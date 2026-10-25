@@ -1,6 +1,6 @@
 """Database access for vehicles. No business rules live here."""
 
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, select
 from sqlalchemy.orm import Session
 
 from app.db.models import Vehicle
@@ -37,23 +37,48 @@ class VehicleRepository:
         min_price: int | None = None,
         max_price: int | None = None,
     ) -> list[Vehicle]:
-        """Return vehicles matching every filter given, ordered by id.
+        """Return vehicles matching every filter given (AND), ordered by id.
 
-        Text filters match anywhere in the value, ignoring case. autoescape
-        makes % and _ match literally instead of acting as LIKE wildcards,
-        so searching "%" doesn't return every vehicle. Category is an exact
-        match; callers pass an already-validated value. Both price bounds
-        are inclusive.
+        With no filters this returns every vehicle, like list_all.
         """
-        query = select(Vehicle).order_by(Vehicle.id)
-        if make is not None:
-            query = query.where(Vehicle.make.icontains(make, autoescape=True))
-        if model is not None:
-            query = query.where(Vehicle.model.icontains(model, autoescape=True))
-        if category is not None:
-            query = query.where(Vehicle.category == category)
-        if min_price is not None:
-            query = query.where(Vehicle.price >= min_price)
-        if max_price is not None:
-            query = query.where(Vehicle.price <= max_price)
+        conditions = _search_conditions(
+            make=make,
+            model=model,
+            category=category,
+            min_price=min_price,
+            max_price=max_price,
+        )
+        # .where() with several conditions joins them with AND; with none it
+        # adds no WHERE clause at all.
+        query = select(Vehicle).where(*conditions).order_by(Vehicle.id)
         return list(self.db.scalars(query))
+
+
+def _search_conditions(
+    *,
+    make: str | None,
+    model: str | None,
+    category: str | None,
+    min_price: int | None,
+    max_price: int | None,
+) -> list[ColumnElement[bool]]:
+    """Turn the given filters into SQL conditions; filters left as None are skipped.
+
+    Text filters match anywhere in the value, ignoring case. autoescape makes
+    % and _ match literally instead of acting as LIKE wildcards, so searching
+    "%" doesn't return every vehicle. Category is an exact match; callers pass
+    an already-validated value. Both price bounds are inclusive. "is not None"
+    rather than truthiness, so a bound of 0 is not skipped.
+    """
+    conditions: list[ColumnElement[bool]] = []
+    if make is not None:
+        conditions.append(Vehicle.make.icontains(make, autoescape=True))
+    if model is not None:
+        conditions.append(Vehicle.model.icontains(model, autoescape=True))
+    if category is not None:
+        conditions.append(Vehicle.category == category)
+    if min_price is not None:
+        conditions.append(Vehicle.price >= min_price)
+    if max_price is not None:
+        conditions.append(Vehicle.price <= max_price)
+    return conditions
