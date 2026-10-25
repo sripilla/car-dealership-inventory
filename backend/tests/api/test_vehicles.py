@@ -284,3 +284,42 @@ def test_search_by_make_treats_percent_as_literal(client, auth_headers):
 
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_search_by_model_is_partial_and_case_insensitive(client, auth_headers):
+    camry = create_vehicle(client, auth_headers, make="Toyota", model="Camry")
+    create_vehicle(client, auth_headers, make="Honda", model="Civic")
+
+    response = client.get(
+        SEARCH_URL,
+        params={"model": "cam"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    assert [vehicle["id"] for vehicle in response.json()] == [camry["id"]]
+
+
+def test_search_by_category_returns_exact_matches(client, auth_headers):
+    suv = create_vehicle(client, auth_headers, make="Toyota", category="SUV")
+    create_vehicle(client, auth_headers, make="Honda", category="Sedan")
+
+    response = client.get(
+        SEARCH_URL,
+        params={"category": "SUV"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    assert [vehicle["id"] for vehicle in response.json()] == [suv["id"]]
+
+
+@pytest.mark.parametrize("category", ["suv", "Truck"])
+def test_search_by_invalid_category_returns_422(client, auth_headers, category):
+    response = client.get(
+        SEARCH_URL,
+        params={"category": category},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 422
