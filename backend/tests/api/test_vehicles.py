@@ -7,14 +7,19 @@ from app.db.models import Vehicle
 VEHICLES_URL = "/api/vehicles"
 
 
-def test_create_vehicle_with_valid_data_returns_201(client, auth_headers):
-    payload = {
+def valid_payload(**overrides):
+    """A valid vehicle body; pass keyword arguments to change single fields."""
+    return {
         "make": "Toyota",
         "model": "Camry",
         "category": "Sedan",
         "price": 3500000,
         "quantity": 2,
-    }
+    } | overrides
+
+
+def test_create_vehicle_with_valid_data_returns_201(client, auth_headers):
+    payload = valid_payload()
 
     response = client.post(
         VEHICLES_URL,
@@ -32,13 +37,7 @@ def test_create_vehicle_with_valid_data_returns_201(client, auth_headers):
 
 
 def test_create_vehicle_without_token_returns_401(client, db_session):
-    payload = {
-        "make": "Toyota",
-        "model": "Camry",
-        "category": "Sedan",
-        "price": 3500000,
-        "quantity": 2,
-    }
+    payload = valid_payload()
 
     response = client.post(VEHICLES_URL, json=payload)
 
