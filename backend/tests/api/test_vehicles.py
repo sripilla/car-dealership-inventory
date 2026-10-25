@@ -323,3 +323,49 @@ def test_search_by_invalid_category_returns_422(client, auth_headers, category):
     )
 
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("params", "expected_prices"),
+    [
+        ({"min_price": 2000000}, [2000000, 3000000]),
+        ({"max_price": 2000000}, [1000000, 2000000]),
+        (
+            {"min_price": 1500000, "max_price": 2500000},
+            [2000000],
+        ),
+    ],
+    ids=["min only", "max only", "both bounds"],
+)
+def test_search_by_price_range_is_inclusive(client, auth_headers, params, expected_prices):
+    for price in (1000000, 2000000, 3000000):
+        create_vehicle(client, auth_headers, price=price)
+
+    response = client.get(
+        SEARCH_URL,
+        params=params,
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    assert [vehicle["price"] for vehicle in response.json()] == (expected_prices)
+
+
+def test_search_with_min_price_greater_than_max_price_returns_422(client, auth_headers):
+    response = client.get(
+        SEARCH_URL,
+        params={"min_price": 3000000, "max_price": 1000000},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 422
+
+
+def test_search_with_non_numeric_min_price_returns_422(client, auth_headers):
+    response = client.get(
+        SEARCH_URL,
+        params={"min_price": "abc"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 422
