@@ -4,6 +4,8 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
+from app.core.categories import VehicleCategory
+
 # Whitespace is stripped *before* the length check, so "   " becomes "" and is
 # rejected, and "  Toyota " is stored as "Toyota".
 NonBlankStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
@@ -14,7 +16,7 @@ class VehicleCreate(BaseModel):
 
     make: NonBlankStr
     model: NonBlankStr
-    category: str
+    category: VehicleCategory
     # strict=True: only real JSON integers are accepted. Pydantic's default
     # "lax" mode would turn "2" into 2 and true into 1.
     price: int = Field(gt=0, strict=True)  # whole rupees; a free car is a typo
@@ -30,6 +32,8 @@ class VehicleOut(BaseModel):
     id: int
     make: str
     model: str
+    # Plain str on output: rows are validated on the way in, and a response
+    # should never fail just because the category list changed later.
     category: str
     price: int
     quantity: int
