@@ -6,9 +6,15 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 
 from app.core.categories import VehicleCategory
 
+# Field rules shared by create and update, so the two can never disagree.
+
 # Whitespace is stripped *before* the length check, so "   " becomes "" and is
 # rejected, and "  Toyota " is stored as "Toyota".
 NonBlankStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+# strict=True: only real JSON integers are accepted. Pydantic's default "lax"
+# mode would turn "2" into 2 and true into 1.
+Price = Annotated[int, Field(gt=0, strict=True)]  # whole rupees; a free car is a typo
+Quantity = Annotated[int, Field(ge=0, strict=True)]  # 0 is valid: out of stock
 
 
 class VehicleCreate(BaseModel):
@@ -17,10 +23,8 @@ class VehicleCreate(BaseModel):
     make: NonBlankStr
     model: NonBlankStr
     category: VehicleCategory
-    # strict=True: only real JSON integers are accepted. Pydantic's default
-    # "lax" mode would turn "2" into 2 and true into 1.
-    price: int = Field(gt=0, strict=True)  # whole rupees; a free car is a typo
-    quantity: int = Field(ge=0, strict=True)  # 0 is valid: out of stock
+    price: Price
+    quantity: Quantity
 
 
 class VehicleOut(BaseModel):
@@ -54,8 +58,8 @@ class VehicleSearchFilters(BaseModel):
     # The enum rejects unknown or wrong-case values with 422, the same rule
     # as create, so a typo is reported instead of silently matching nothing.
     category: VehicleCategory | None = None
-    # Not strict, unlike VehicleCreate: query-string values always arrive as
-    # text, so "2000000" must be converted. "abc" still fails with 422.
+    # Not the strict Price type: query-string values always arrive as text, so
+    # "2000000" must be converted. "abc" still fails with 422.
     min_price: int | None = None  # inclusive
     max_price: int | None = None  # inclusive
 
@@ -77,7 +81,7 @@ class VehicleUpdate(BaseModel):
     """Body of PUT /api/vehicles/{id}: a partial update.
 
     Omitted fields keep their current values; supplied fields follow the
-    same rules as VehicleCreate.
+    same rules as VehicleCreate (the same shared types).
 
     Each field is *optional* but not *nullable*: the type has no "| None",
     so an explicit null fails validation with 422. The None default is used
@@ -86,8 +90,8 @@ class VehicleUpdate(BaseModel):
     never written to the database.
     """
 
-    make: NonBlankStr = Field(default=None)
-    model: NonBlankStr = Field(default=None)
-    category: VehicleCategory = Field(default=None)
-    price: int = Field(default=None, gt=0, strict=True)
-    quantity: int = Field(default=None, ge=0, strict=True)
+    make: NonBlankStr = None
+    model: NonBlankStr = None
+    category: VehicleCategory = None
+    price: Price = None
+    quantity: Quantity = None
