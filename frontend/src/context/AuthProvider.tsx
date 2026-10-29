@@ -10,6 +10,11 @@ import { AuthContext } from './authContext'
  * the user itself always comes from GET /api/auth/me, so the server stays
  * the source of truth for is_admin.
  */
+
+/** Supplies authentication state and functions
+ * Manages the user, token, login, logout, and 
+ * loading state; shares them with the app.
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY))
   const [user, setUser] = useState<User | null>(null)

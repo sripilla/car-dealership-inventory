@@ -1,6 +1,7 @@
 import { createContext } from 'react'
 import type { User } from '../api/types'
 
+/** defines what authentication data exists */
 export interface AuthState {
   /** The logged-in user from GET /api/auth/me, or null. */
   user: User | null
