@@ -9,10 +9,13 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
-# SQLite only allows the thread that opened a connection to use it by default.
-# FastAPI may handle a request on a different thread, so we turn that check off.
-# Other databases (e.g. Postgres) don't need this, so it's applied only for SQLite.
+
 connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
+
+#Engine creates from DATABASE.URL, knows which database type its talking to(SQLite)
+#manages the actual connections alls reuse aswell.
+#each new session borrows a connection from engine
+#session is short-lived unit of work that tracks objects which are added or changed, sends the SQL commit and can roll back
 
 engine = create_engine(settings.DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
@@ -28,3 +31,4 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
+#db.close runs even if the route raised an error

@@ -1,5 +1,5 @@
 """The users table."""
-
+#model- how data is stored
 from datetime import datetime
 
 from sqlalchemy import String, false, func

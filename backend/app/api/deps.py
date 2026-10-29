@@ -1,7 +1,9 @@
 """FastAPI dependencies shared by routes: the auth and vehicle services, the
 current user, and the admin check.
 """
-
+#function the route declares with depends(...) - fastapi runs it before the route ad passes in the result
+#401 for everything because the client only needs to know that they have to login again
+#401 should include the autenticate bearer header which tells users how to autenticate
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status

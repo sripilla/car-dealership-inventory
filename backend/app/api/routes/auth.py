@@ -1,5 +1,5 @@
 """Authentication endpoints: register, login and the current user."""
-
+#The request body is validated by the schema, the dependencies run (login, admin), it calls one service method,
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status

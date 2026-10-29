@@ -21,9 +21,9 @@ class Settings(BaseSettings):
     ADMIN_PASSWORD: str = "change-me"
     # Browser origins allowed to call the API (the React dev server by
     # default). In .env, write it as JSON: CORS_ORIGINS=["https://my.app"]
-    CORS_ORIGINS: list[str] = ["http://localhost:5173"]
+    CORS_ORIGINS: list[str] = ["http://localhost:5173"] #the frontend origins allowed by CORS
 
-
+#get settings returns one shared settings object so .env is read once
 @lru_cache
 def get_settings() -> Settings:
     """Return one shared Settings instance (cached so .env is read only once)."""

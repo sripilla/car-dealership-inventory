@@ -3,6 +3,8 @@
 Kept separate from the database model so the API never exposes stored-only
 fields such as hashed_password.
 """
+#what the api accepts and return - schema
+
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
